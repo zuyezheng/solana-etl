@@ -1,3 +1,4 @@
+import gzip
 import json
 import time
 from argparse import ArgumentParser
@@ -25,7 +26,7 @@ class Extract:
         path_loc = self.output_path.joinpath(str(slot//self.slots_per_dir * self.slots_per_dir))
         path_loc.mkdir(parents=True, exist_ok=True)
 
-        return path_loc.joinpath(f'{slot}.json')
+        return path_loc.joinpath(f'{slot}.json.gz')
 
     def execute_with_backoff(
         self,
@@ -52,12 +53,12 @@ class Extract:
 
     def start(self, last_slot: int, first_slot: int):
         for slot in range(last_slot, first_slot - 1, -1):
-            with open(self.slot_path(slot), 'w') as f:
+            with gzip.open(self.slot_path(slot), 'w') as f:
                 slot_info = self.execute_with_backoff(lambda: self._client.get_block(slot))
                 if slot_info is None:
                     print(f'Error fetching info for slot {slot}.')
                 else:
-                    f.write(json.dumps(slot_info))
+                    f.write(json.dumps(slot_info).encode('utf-8'))
 
 
 if __name__ == '__main__':
