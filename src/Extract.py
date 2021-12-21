@@ -1,10 +1,25 @@
 import gzip
+import itertools
 import json
 import time
 from argparse import ArgumentParser
 from pathlib import Path
 
 from solana.rpc.api import Client
+
+
+class BlockException(Exception):
+
+    def __init__(self, error_json):
+        self.error_json = error_json
+        super().__init__(f'Error code {self.error_json["code"]}: {self.error_json["message"]}')
+
+    def should_retry(self):
+        if self.error_json['code'] == -32004:
+            # block not yet available, should wait for it
+            return True
+
+        return False
 
 
 class Extract:
@@ -41,7 +56,11 @@ class Extract:
         try:
             result = call()
         except Exception as e:
-            if wait_duration <= max_duration:
+            retryable = True
+            if isinstance(e, BlockException):
+                retryable = e.should_retry()
+
+            if retryable and wait_duration <= max_duration:
                 print(f'Waiting {wait_duration} seconds: "{e}".')
 
                 time.sleep(wait_duration)
@@ -51,10 +70,25 @@ class Extract:
 
         return result
 
-    def start(self, last_slot: int, first_slot: int):
-        for slot in range(last_slot, first_slot - 1, -1):
+    def get_block(self, slot: int):
+        block = self._client.get_block(slot)
+        if 'error' in block:
+            raise BlockException(block['error'])
+
+        return block
+
+    def start(self, start: int, end: int):
+        def get_slots():
+            if end is None:
+                return itertools.count(start)
+            elif end < start:
+                return range(start, end - 1, -1)
+            else:
+                return range(start, end + 1)
+
+        for slot in get_slots():
             with gzip.open(self.slot_path(slot), 'w') as f:
-                slot_info = self.execute_with_backoff(lambda: self._client.get_block(slot))
+                slot_info = self.execute_with_backoff(lambda: self.get_block(slot))
                 if slot_info is None:
                     print(f'Error fetching info for slot {slot}.')
                 else:
@@ -77,15 +111,15 @@ if __name__ == '__main__':
         default='https://api.mainnet-beta.solana.com'
     )
     parser.add_argument(
-        '--last_slot',
+        '--start',
         type=int,
-        help='Last slot where extraction will start.'
+        help='Slot to start extract.'
     )
     parser.add_argument(
-        '--first_slot',
+        '--end',
         type=int,
-        help='First slot where extraction stops.',
-        default=0
+        help='Slot to end extract, if less than start count down from start, if None keep counting up with backoff.',
+        default=None
     )
     parser.add_argument(
         '--slots_per_dir',
@@ -97,4 +131,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     extract = Extract(args.endpoint, args.output_loc, args.slots_per_dir)
-    extract.start(args.last_slot, args.first_slot)
+    extract.start(args.start, args.end)
