@@ -87,11 +87,11 @@ class Extract:
                 return range(start, end + 1)
 
         for slot in get_slots():
-            with gzip.open(self.slot_path(slot), 'w') as f:
-                slot_info = self.execute_with_backoff(lambda: self.get_block(slot))
-                if slot_info is None:
-                    print(f'Error fetching info for slot {slot}.')
-                else:
+            slot_info = self.execute_with_backoff(lambda: self.get_block(slot))
+            if slot_info is None:
+                print(f'Error fetching info for slot {slot}.')
+            else:
+                with gzip.open(self.slot_path(slot), 'w') as f:
                     f.write(json.dumps(slot_info).encode('utf-8'))
 
 
