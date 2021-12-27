@@ -9,7 +9,7 @@ from solana.rpc.api import Client
 
 class Extract:
     """
-    Extract solana blocks as JSON and dump to file.
+    Extract solana blocks as gzipped JSON and dump to file.
 
     @author zuye.zheng
     """
