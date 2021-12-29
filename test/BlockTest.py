@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
 
+from src.BalanceChange import BalanceChangeAgg
 from src.Block import Block
 
 
@@ -69,13 +70,23 @@ class BlockTest(unittest.TestCase):
 
         self.assertEqual(
             -0.00001,
-            self._interesting_transaction.total_account_balance_change(False).float,
+            self._interesting_transaction.total_account_balance_change().float,
             'Signed change should be the fee.'
         )
 
         self.assertEqual(
             0.0239524,
-            self._interesting_transaction.total_account_balance_change().float
+            self._interesting_transaction.total_account_balance_change(BalanceChangeAgg.ABS).float
+        )
+
+        self.assertEqual(
+            -0.0119812,
+            self._interesting_transaction.total_account_balance_change(BalanceChangeAgg.OUT).float
+        )
+
+        self.assertEqual(
+            0.0119712,
+            self._interesting_transaction.total_account_balance_change(BalanceChangeAgg.IN).float
         )
 
     def test_token_balance_changes(self):
@@ -104,7 +115,7 @@ class BlockTest(unittest.TestCase):
             },
             dict(map(
                 lambda kv: (kv[0], kv[1].float),
-                self._transaction_with_tokens.total_token_changes(False).items()
+                self._transaction_with_tokens.total_token_changes().items()
             )),
             'Tokens shouldn\'t disappear.'
         )
@@ -116,6 +127,28 @@ class BlockTest(unittest.TestCase):
             },
             dict(map(
                 lambda kv: (kv[0], kv[1].float),
-                self._transaction_with_tokens.total_token_changes().items()
+                self._transaction_with_tokens.total_token_changes(BalanceChangeAgg.ABS).items()
+            ))
+        )
+
+        self.assertEqual(
+            {
+                'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': -12.884202,
+                'EWS2ATMt5fQk89NWLJYNRmGaNoji8MhFZkUB4DiWCCcz': -4863.519055
+            },
+            dict(map(
+                lambda kv: (kv[0], kv[1].float),
+                self._transaction_with_tokens.total_token_changes(BalanceChangeAgg.OUT).items()
+            ))
+        )
+
+        self.assertEqual(
+            {
+                'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 12.884202,
+                'EWS2ATMt5fQk89NWLJYNRmGaNoji8MhFZkUB4DiWCCcz': 4863.519055
+            },
+            dict(map(
+                lambda kv: (kv[0], kv[1].float),
+                self._transaction_with_tokens.total_token_changes(BalanceChangeAgg.IN).items()
             ))
         )

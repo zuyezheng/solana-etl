@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from functools import cached_property, reduce
 from typing import Dict, List, Iterable, Set
 
+from src.Account import Account
+from src.BalanceChange import TokenBalanceChange, AccountBalanceChange, BalanceChangeAgg
 from src.Instruction import Instructions, Instruction
 from src.NumberWithScale import NumberWithScale
 
@@ -121,12 +122,12 @@ class Transaction:
 
         return changes
 
-    def total_account_balance_change(self, absolute=True) -> NumberWithScale:
+    def total_account_balance_change(self, agg: BalanceChangeAgg = BalanceChangeAgg.ALL) -> NumberWithScale:
         """ Sum of change of all balances. """
         return reduce(
             lambda a, b: a + b,
             map(
-                lambda c: (abs(c.change) if absolute else c.change),
+                lambda c: agg(c.change),
                 self.account_balance_changes.values()
             )
         )
@@ -150,63 +151,14 @@ class Transaction:
 
         return changes
 
-    def total_token_changes(self, absolute=True) -> Dict[str, NumberWithScale]:
+    def total_token_changes(self, agg: BalanceChangeAgg = BalanceChangeAgg.ALL) -> Dict[str, NumberWithScale]:
         """ Sum of token changes by mint address. """
         changes = {}
 
         for change in self.token_balance_changes.values():
-            change_val = abs(change.change) if absolute else change.change
-
             if change.mint in changes:
-                changes[change.mint] += change_val
+                changes[change.mint] += agg(change.change)
             else:
-                changes[change.mint] = change_val
+                changes[change.mint] = agg(change.change)
 
         return changes
-
-
-@dataclass
-class Account:
-    """ Account with key and index specific to a transaction. """
-    # first signature of a transaction
-    signature: str
-    index: int
-    key: str
-
-    def __hash__(self):
-        # accounts in this context are specific to a transaction
-        return hash((self.signature, self.key))
-
-    def __eq__(self, other):
-        if isinstance(other, Account):
-            return self.signature == other.signature and self.key == other.key
-
-        return NotImplemented
-
-
-class BalanceChange:
-    account: Account
-    start: NumberWithScale
-    end: NumberWithScale
-    change: NumberWithScale
-
-    def __init__(self, account: Account, start: int, end: int, decimals: int):
-        self.account = account
-        self.start = NumberWithScale(start, decimals)
-        self.end = NumberWithScale(end, decimals)
-        self.change = NumberWithScale(end - start, decimals)
-
-
-class AccountBalanceChange(BalanceChange):
-
-    def __init__(self, account: Account, start: int, end: int):
-        super().__init__(account, start, end, 9)
-
-
-class TokenBalanceChange(BalanceChange):
-    mint: str
-
-    def __init__(self, account: Account, mint: str, start: int, end: int, decimals: int):
-        super().__init__(account, start, end, decimals)
-
-        self.mint = mint

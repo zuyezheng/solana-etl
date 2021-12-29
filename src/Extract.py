@@ -71,7 +71,7 @@ class Extract:
         return result
 
     def get_block(self, slot: int):
-        block = self._client.get_block(slot)
+        block = self._client.get_block(slot, 'jsonParsed')
         if 'error' in block:
             raise BlockException(block['error'])
 

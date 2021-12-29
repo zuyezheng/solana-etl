@@ -29,6 +29,33 @@ class NumberWithScale:
 
         return NotImplemented
 
+    def __lt__(self, other: NumberWithScale) -> bool:
+        if isinstance(other, NumberWithScale) and self.scale == other.scale:
+            return self.v < other.v
+
+        return NotImplemented
+
+    def __le__(self, other: NumberWithScale) -> bool:
+        if isinstance(other, NumberWithScale) and self.scale == other.scale:
+            return self.v <= other.v
+
+        return NotImplemented
+
+    def __gt__(self, other: NumberWithScale) -> bool:
+        if isinstance(other, NumberWithScale) and self.scale == other.scale:
+            return self.v > other.v
+
+        return NotImplemented
+
+    def __ge__(self, other: NumberWithScale) -> bool:
+        if isinstance(other, NumberWithScale) and self.scale == other.scale:
+            return self.v >= other.v
+
+        return NotImplemented
+
+    def zero(self):
+        return NumberWithScale(0, self.scale)
+
     @property
     def float(self):
         return float(self.v) / 10**self.scale
