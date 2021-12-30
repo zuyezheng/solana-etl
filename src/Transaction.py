@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property, reduce
-from typing import Dict, List, Set
+from typing import Dict, List
 
 from src.Account import Account
 from src.Accounts import Accounts
@@ -63,20 +63,20 @@ class Transaction:
         """ Construct the list of instructions with any nested inner instructions. """
         inner_instructions = {}
         for inner in self.meta['innerInstructions']:
-            inner_instructions[inner['index']] = list(map(Instruction.from_json, inner['instructions']))
+            inner_instructions[inner['index']] = list(map(
+                lambda data: Instruction.from_json(self.accounts, data),
+                inner['instructions']
+            ))
 
         instructions = []
         for instruction_i, instruction in enumerate(self.transaction['message']['instructions']):
             instructions.append(Instruction.from_json(
+                self.accounts,
                 instruction,
                 inner_instructions[instruction_i] if instruction_i in inner_instructions else None
             ))
 
         return Instructions(instructions)
-
-    def programs(self) -> Set[Account]:
-        """ Get accounts that are programs. """
-        return self.accounts.from_indices(self.instructions.program_ids)
 
     @cached_property
     def account_balance_changes(self) -> Dict[Account, AccountBalanceChange]:

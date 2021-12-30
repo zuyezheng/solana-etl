@@ -3,9 +3,13 @@ from pathlib import Path
 
 from src.BalanceChange import BalanceChangeAgg
 from src.Block import Block
+from src.Transaction import Transaction
 
 
 class BlockTest(unittest.TestCase):
+    _block: Block
+    _interesting_transaction: Transaction
+    _transaction_with_tokens: Transaction
 
     @classmethod
     def setUpClass(cls):
@@ -40,7 +44,7 @@ class BlockTest(unittest.TestCase):
                 'cndyAnrLdpjq1Ssp1z8xxDsB8dxe7u4HL5Nxi2K5WXZ',
                 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
              },
-            set(map(lambda a: a.key, self._interesting_transaction.programs())),
+            set(map(lambda a: a.key, self._interesting_transaction.instructions.programs)),
             'Program keys should include those from inner and outer instructions.'
         )
 
