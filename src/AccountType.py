@@ -1,24 +1,20 @@
-from enum import Enum
+from enum import Enum, auto
 
 from src.Account import Account
 from src.Transaction import Transaction
 
 
 class AccountType(Enum):
-    ADDRESS_MAP = 0
-    SYSVAR = 1
-    PROGRAM = 2
-    TOKEN_PROGRAM = 3
-    MINT = 4
-    TOKEN_ACCOUNT = 5
-    ACCOUNT = 6
+    SYSVAR = auto()
+    PROGRAM = auto()
+    TOKEN_PROGRAM = auto()
+    TOKEN_ACCOUNT = auto()
+    ACCOUNT = auto()
 
     @staticmethod
     # move to
     def from_account(account: Account, transaction: Transaction):
-        if account.key == '11111111111111111111111111111111':
-            return AccountType.ADDRESS_MAP
-        elif account.key.startswith('Sysvar'):
+        if account.key.startswith('Sysvar'):
             return AccountType.SYSVAR
         else:
             return AccountType.ACCOUNT

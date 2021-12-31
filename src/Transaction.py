@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property, reduce
-from typing import Dict, List
+from typing import Dict, List, Set
 
 from src.Account import Account
 from src.Accounts import Accounts
@@ -64,19 +64,17 @@ class Transaction:
         inner_instructions = {}
         for inner in self.meta['innerInstructions']:
             inner_instructions[inner['index']] = list(map(
-                lambda data: Instruction.from_json(self.accounts, data),
+                lambda data: Instruction.factory(self.accounts, data),
                 inner['instructions']
             ))
 
         instructions = []
         for instruction_i, instruction in enumerate(self.transaction['message']['instructions']):
-            instructions.append(Instruction.from_json(
-                self.accounts,
-                instruction,
-                inner_instructions[instruction_i] if instruction_i in inner_instructions else None
+            instructions.append(Instruction.factory(
+                self.accounts, instruction, inner_instructions.get(instruction_i)
             ))
 
-        return Instructions(instructions)
+        return Instructions(instructions).set_ids()
 
     @cached_property
     def account_balance_changes(self) -> Dict[Account, AccountBalanceChange]:
@@ -130,3 +128,8 @@ class Transaction:
                 changes[change.mint] = agg(change.change)
 
         return changes
+
+    @property
+    def mints(self) -> Set[str]:
+        """ All token mints in the transaction. """
+        return {change.mint for change in self.token_balance_changes.values()}

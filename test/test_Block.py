@@ -29,25 +29,6 @@ class BlockTest(unittest.TestCase):
             'Set of transactions more than fee and only fee should include all transactions.'
         )
 
-    def test_instructions(self):
-        self.assertEqual(
-            21,
-            self._interesting_transaction.instructions.size,
-            'Size should be count of outer and inner instructions.'
-        )
-
-        self.assertEqual(
-            {
-                '11111111111111111111111111111111',
-                'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
-                'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-                'cndyAnrLdpjq1Ssp1z8xxDsB8dxe7u4HL5Nxi2K5WXZ',
-                'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
-             },
-            set(map(lambda a: a.key, self._interesting_transaction.instructions.programs)),
-            'Program keys should include those from inner and outer instructions.'
-        )
-
     def test_balance_changes(self):
         self.assertEqual(
             {
@@ -155,4 +136,12 @@ class BlockTest(unittest.TestCase):
                 lambda kv: (kv[0], kv[1].float),
                 self._transaction_with_tokens.total_token_changes(BalanceChangeAgg.IN).items()
             ))
+        )
+
+        self.assertEqual(
+            {
+                'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+                'EWS2ATMt5fQk89NWLJYNRmGaNoji8MhFZkUB4DiWCCcz'
+            },
+            self._transaction_with_tokens.mints
         )
