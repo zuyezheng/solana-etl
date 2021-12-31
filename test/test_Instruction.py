@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
 
+from ProgramInstruction import ProgramInstruction
 from src.Block import Block
 from src.Transaction import Transaction
 
@@ -62,11 +63,11 @@ class BlockTest(unittest.TestCase):
             ],
             list(map(
                 lambda instruction: instruction.gen_id,
-                self._interesting_transaction.instructions.filter('system').flatten()
+                ProgramInstruction.SYSTEM.filter(self._interesting_transaction.instructions).flatten()
             ))
         )
 
-        filtered = self._interesting_transaction.instructions.filter('system', 'transfer')
+        filtered = ProgramInstruction.SYSTEM_TRANSFER.filter(self._interesting_transaction.instructions)
         self.assertEqual(
             [
                 '2', '2.0',
@@ -77,7 +78,7 @@ class BlockTest(unittest.TestCase):
         self.assertEqual(6, filtered.size)
 
         # flatten before filtering will exclude outer instructions
-        filtered = self._interesting_transaction.instructions.filter('system', 'transfer', flatten=True)
+        filtered = ProgramInstruction.SYSTEM_TRANSFER.filter(self._interesting_transaction.instructions, True)
         self.assertEqual(
             [
                 '2.0',
