@@ -1,10 +1,15 @@
 import unittest
 from pathlib import Path
 
+from src.BalanceChange import BalanceChangeAgg
 from src.Block import Block
+from src.Transaction import Transaction
 
 
 class BlockTest(unittest.TestCase):
+    _block: Block
+    _interesting_transaction: Transaction
+    _transaction_with_tokens: Transaction
 
     @classmethod
     def setUpClass(cls):
@@ -22,25 +27,6 @@ class BlockTest(unittest.TestCase):
             set(self._block.transactions),
             set(self._block.transactions.more_than_fee()) | set(self._block.transactions.only_fee()),
             'Set of transactions more than fee and only fee should include all transactions.'
-        )
-
-    def test_instructions(self):
-        self.assertEqual(
-            21,
-            self._interesting_transaction.instructions.size,
-            'Size should be count of outer and inner instructions.'
-        )
-
-        self.assertEqual(
-            {
-                '11111111111111111111111111111111',
-                'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
-                'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-                'cndyAnrLdpjq1Ssp1z8xxDsB8dxe7u4HL5Nxi2K5WXZ',
-                'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
-             },
-            set(map(lambda a: a.key, self._interesting_transaction.programs())),
-            'Program keys should include those from inner and outer instructions.'
         )
 
     def test_balance_changes(self):
@@ -69,13 +55,23 @@ class BlockTest(unittest.TestCase):
 
         self.assertEqual(
             -0.00001,
-            self._interesting_transaction.total_account_balance_change(False).float,
+            self._interesting_transaction.total_account_balance_change().float,
             'Signed change should be the fee.'
         )
 
         self.assertEqual(
             0.0239524,
-            self._interesting_transaction.total_account_balance_change().float
+            self._interesting_transaction.total_account_balance_change(BalanceChangeAgg.ABS).float
+        )
+
+        self.assertEqual(
+            -0.0119812,
+            self._interesting_transaction.total_account_balance_change(BalanceChangeAgg.OUT).float
+        )
+
+        self.assertEqual(
+            0.0119712,
+            self._interesting_transaction.total_account_balance_change(BalanceChangeAgg.IN).float
         )
 
     def test_token_balance_changes(self):
@@ -104,7 +100,7 @@ class BlockTest(unittest.TestCase):
             },
             dict(map(
                 lambda kv: (kv[0], kv[1].float),
-                self._transaction_with_tokens.total_token_changes(False).items()
+                self._transaction_with_tokens.total_token_changes().items()
             )),
             'Tokens shouldn\'t disappear.'
         )
@@ -116,6 +112,36 @@ class BlockTest(unittest.TestCase):
             },
             dict(map(
                 lambda kv: (kv[0], kv[1].float),
-                self._transaction_with_tokens.total_token_changes().items()
+                self._transaction_with_tokens.total_token_changes(BalanceChangeAgg.ABS).items()
             ))
+        )
+
+        self.assertEqual(
+            {
+                'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': -12.884202,
+                'EWS2ATMt5fQk89NWLJYNRmGaNoji8MhFZkUB4DiWCCcz': -4863.519055
+            },
+            dict(map(
+                lambda kv: (kv[0], kv[1].float),
+                self._transaction_with_tokens.total_token_changes(BalanceChangeAgg.OUT).items()
+            ))
+        )
+
+        self.assertEqual(
+            {
+                'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 12.884202,
+                'EWS2ATMt5fQk89NWLJYNRmGaNoji8MhFZkUB4DiWCCcz': 4863.519055
+            },
+            dict(map(
+                lambda kv: (kv[0], kv[1].float),
+                self._transaction_with_tokens.total_token_changes(BalanceChangeAgg.IN).items()
+            ))
+        )
+
+        self.assertEqual(
+            {
+                'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+                'EWS2ATMt5fQk89NWLJYNRmGaNoji8MhFZkUB4DiWCCcz'
+            },
+            self._transaction_with_tokens.mints
         )
