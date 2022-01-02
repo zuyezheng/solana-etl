@@ -3,11 +3,11 @@ from __future__ import annotations
 from functools import cached_property, reduce
 from typing import Dict, List, Set
 
-from src.Account import Account
-from src.Accounts import Accounts
-from src.BalanceChange import TokenBalanceChange, AccountBalanceChange, BalanceChangeAgg
-from src.Instruction import Instructions, Instruction
-from src.NumberWithScale import NumberWithScale
+from parse.Account import Account
+from parse.Accounts import Accounts
+from parse.BalanceChange import TokenBalanceChange, AccountBalanceChange, BalanceChangeAgg
+from parse.Instruction import Instructions, Instruction
+from parse.NumberWithScale import NumberWithScale
 
 
 class Transaction:

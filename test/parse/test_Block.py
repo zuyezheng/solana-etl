@@ -1,12 +1,13 @@
 import unittest
 from pathlib import Path
 
-from src.BalanceChange import BalanceChangeAgg
-from src.Block import Block
-from src.Transaction import Transaction
+from parse.BalanceChange import BalanceChangeAgg
+from parse.Block import Block
+from parse.Transaction import Transaction
 
 
-class BlockTest(unittest.TestCase):
+class TestBlock(unittest.TestCase):
+
     _block: Block
     _interesting_transaction: Transaction
     _transaction_with_tokens: Transaction

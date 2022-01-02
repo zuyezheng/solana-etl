@@ -1,6 +1,6 @@
 from typing import List
 
-from src.Transaction import Transaction
+from parse.Transaction import Transaction
 
 
 class Transactions:
@@ -18,6 +18,9 @@ class Transactions:
 
     def __iter__(self):
         return self.transactions.__iter__()
+
+    def __len__(self):
+        return len(self.transactions)
 
     def more_than_fee(self) -> List[Transaction]:
         """ Transactions where absolute balance change was greater than the fee. """

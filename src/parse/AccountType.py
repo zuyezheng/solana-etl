@@ -1,7 +1,7 @@
 from enum import Enum, auto
 
-from src.Account import Account
-from src.Transaction import Transaction
+from parse.Account import Account
+from parse.Transaction import Transaction
 
 
 class AccountType(Enum):

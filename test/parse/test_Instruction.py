@@ -1,12 +1,13 @@
 import unittest
 from pathlib import Path
 
-from ProgramInstruction import ProgramInstruction
-from src.Block import Block
-from src.Transaction import Transaction
+from parse.ProgramInstruction import ProgramInstruction
+from parse.Block import Block
+from parse.Transaction import Transaction
 
 
-class BlockTest(unittest.TestCase):
+class TestInstruction(unittest.TestCase):
+
     _interesting_transaction: Transaction
 
     @classmethod
@@ -19,7 +20,7 @@ class BlockTest(unittest.TestCase):
     def test_properties(self):
         self.assertEqual(
             21,
-            self._interesting_transaction.instructions.size,
+            len(self._interesting_transaction.instructions),
             'Size should be count of outer and inner instructions.'
         )
 
@@ -38,7 +39,7 @@ class BlockTest(unittest.TestCase):
     def test_flatten(self):
         flattened = self._interesting_transaction.instructions.flatten()
 
-        self.assertEqual(21, flattened.size, 'Flattened including inner should have the same number of instructions.')
+        self.assertEqual(21, len(flattened), 'Flattened including inner should have the same number of instructions.')
 
         self.assertEqual(
             [
@@ -75,7 +76,7 @@ class BlockTest(unittest.TestCase):
             ],
             list(map(lambda instruction: instruction.gen_id, filtered.flatten()))
         )
-        self.assertEqual(6, filtered.size)
+        self.assertEqual(6, len(filtered))
 
         # flatten before filtering will exclude outer instructions
         filtered = ProgramInstruction.SYSTEM_TRANSFER.filter(self._interesting_transaction.instructions, True)
@@ -86,4 +87,4 @@ class BlockTest(unittest.TestCase):
             ],
             list(map(lambda instruction: instruction.gen_id, filtered.flatten()))
         )
-        self.assertEqual(4, filtered.size)
+        self.assertEqual(4, len(filtered))
