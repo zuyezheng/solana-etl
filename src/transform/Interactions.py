@@ -1,8 +1,8 @@
 from typing import List
 
-from parse.Block import Block
-from parse.ProgramInstruction import ProgramInstruction
-from transform.Interaction import Interaction
+from src.parse.Block import Block
+from src.parse.ProgramInstruction import ProgramInstruction
+from src.transform.Interaction import Interaction
 
 
 class Interactions:

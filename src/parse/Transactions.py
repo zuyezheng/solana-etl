@@ -1,6 +1,6 @@
 from typing import List
 
-from parse.Transaction import Transaction
+from src.parse.Transaction import Transaction
 
 
 class Transactions:

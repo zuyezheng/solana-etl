@@ -3,11 +3,11 @@ from __future__ import annotations
 from functools import cached_property, reduce
 from typing import Dict, List, Set
 
-from parse.Account import Account
-from parse.Accounts import Accounts
-from parse.BalanceChange import TokenBalanceChange, AccountBalanceChange, BalanceChangeAgg
-from parse.Instruction import Instructions, Instruction
-from parse.NumberWithScale import NumberWithScale
+from src.parse.Account import Account
+from src.parse.Accounts import Accounts
+from src.parse.BalanceChange import TokenBalanceChange, AccountBalanceChange, BalanceChangeAgg
+from src.parse.Instruction import Instructions, Instruction
+from src.parse.NumberWithScale import NumberWithScale
 
 
 class Transaction:
@@ -16,6 +16,7 @@ class Transaction:
 
     @author zuyezheng
     """
+
     meta: Dict[str, any]
     transaction: Dict[str, any]
     # signatures are an array, but they are unique so the first is sufficient as an identifier.

@@ -4,8 +4,8 @@ from abc import abstractmethod
 from functools import reduce, cached_property
 from typing import Dict, List, Set, Optional
 
-from parse.Account import Account
-from parse.Accounts import Accounts
+from src.parse.Account import Account
+from src.parse.Accounts import Accounts
 
 
 class Instruction:
@@ -100,6 +100,7 @@ class Instruction:
 
 class PartiallyParsedInstruction(Instruction):
     """ Instruction where we only know about the accounts and program involved and not the actual operations. """
+
     data: str
 
     @staticmethod
@@ -140,6 +141,7 @@ class PartiallyParsedInstruction(Instruction):
 
 
 class ParsedInstruction(Instruction):
+
     program_name: str
     instruction_type: Optional[str]
     info_accounts: Dict[str, Account]

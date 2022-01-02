@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from parse.Instruction import ParsedInstruction
-from parse.NumberWithScale import NumberWithScale
-from parse.ProgramInstruction import ProgramInstruction
+from src.parse.Instruction import ParsedInstruction
+from src.parse.NumberWithScale import NumberWithScale
+from src.parse.ProgramInstruction import ProgramInstruction
 
 
 class Interaction:

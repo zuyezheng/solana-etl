@@ -7,8 +7,8 @@ from functools import cached_property
 from pathlib import Path
 from typing import Dict
 
-from parse.Transaction import Transaction
-from parse.Transactions import Transactions
+from src.parse.Transaction import Transaction
+from src.parse.Transactions import Transactions
 
 
 class Block:

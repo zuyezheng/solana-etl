@@ -1,10 +1,14 @@
 from enum import Enum, auto
 
-from parse.Account import Account
-from parse.Transaction import Transaction
+from src.parse.Account import Account
+from src.parse.Transaction import Transaction
 
 
 class AccountType(Enum):
+    """
+    TODO implement
+    """
+
     SYSVAR = auto()
     PROGRAM = auto()
     TOKEN_PROGRAM = auto()

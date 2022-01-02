@@ -1,7 +1,7 @@
 from enum import Enum
 
-from parse.Account import Account
-from parse.NumberWithScale import NumberWithScale
+from src.parse.Account import Account
+from src.parse.NumberWithScale import NumberWithScale
 
 
 class BalanceChange:
@@ -10,6 +10,7 @@ class BalanceChange:
 
     @author zuyehzheng
     """
+
     account: Account
     start: NumberWithScale
     end: NumberWithScale
@@ -29,6 +30,7 @@ class AccountBalanceChange(BalanceChange):
 
 
 class TokenBalanceChange(BalanceChange):
+
     mint: str
 
     def __init__(self, account: Account, mint: str, start: int, end: int, decimals: int):
@@ -38,6 +40,7 @@ class TokenBalanceChange(BalanceChange):
 
 
 class BalanceChangeAgg(Enum):
+
     # aggregate all changes
     ALL = 0
     # all changes, but as absolutes

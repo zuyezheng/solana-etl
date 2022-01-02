@@ -13,6 +13,7 @@ class Account:
 
     @author zuyezheng
     """
+
     index: int
     key: str
     signer: Optional[bool] = None

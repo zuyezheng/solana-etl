@@ -1,15 +1,15 @@
 import unittest
 from pathlib import Path
 
-from parse.Block import Block
-from transform.Interactions import Interactions
+from src.parse.Block import Block
+from src.transform.Interactions import Interactions
 
 
 class TestInteractions(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._block = Block.open(Path(f'test/resources/110130000.json.gz'))
+        cls._block = Block.open(Path(f'resources/110130000.json.gz'))
 
     def test_transfers(self):
         transfers = Interactions([self._block])
