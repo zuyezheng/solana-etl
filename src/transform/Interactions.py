@@ -1,3 +1,4 @@
+from functools import partial
 from typing import List
 
 from src.parse.Block import Block
@@ -19,7 +20,7 @@ class Interactions:
         for block in blocks:
             for transaction in block.transactions:
                 self.interactions.extend(map(
-                    Interaction.from_instruction,
+                    partial(Interaction.from_instruction, transaction.signature),
                     ProgramInstruction.SYSTEM_TRANSFER.filter(transaction.instructions, True)
                 ))
 

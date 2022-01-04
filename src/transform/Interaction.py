@@ -14,9 +14,9 @@ class Interaction:
     """
 
     @staticmethod
-    def from_instruction(instruction: ParsedInstruction) -> Interaction:
+    def from_instruction(transaction_signature: str, instruction: ParsedInstruction) -> Interaction:
         if ProgramInstruction.SYSTEM_TRANSFER.of(instruction):
-            return Transfer.from_instruction(instruction)
+            return Transfer.from_instruction(transaction_signature, instruction)
 
         raise NotImplementedError
 
@@ -27,6 +27,7 @@ class Transfer(Interaction):
     @author zuyezheng
     """
 
+    transaction_signature: str
     source: str
     destination: str
     value: NumberWithScale
@@ -34,17 +35,19 @@ class Transfer(Interaction):
     mint: Optional[str] = None
 
     @staticmethod
-    def from_instruction(instruction: ParsedInstruction) -> Interaction:
+    def from_instruction(transaction_signature: str, instruction: ParsedInstruction) -> Interaction:
         return Transfer.coin(
+            transaction_signature,
             instruction.info_accounts['source'].key,
             instruction.info_accounts['destination'].key,
             instruction.info_values['lamports']
         )
 
     @staticmethod
-    def coin(source: str, destination: str, lamports: int) -> Transfer:
+    def coin(transaction_signature: str, source: str, destination: str, lamports: int) -> Transfer:
         """ Coin interaction with value in lamports. """
         return Transfer(
+            transaction_signature=transaction_signature,
             source=source,
             destination=destination,
             value=NumberWithScale(lamports, 9),

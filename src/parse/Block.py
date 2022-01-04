@@ -43,7 +43,10 @@ class Block:
     def has_transactions(self) -> bool:
         return not self.missing and len(self.result['transactions']) > 0
 
-    def block_time(self) -> time:
+    def epoch(self) -> int:
+        return self.result['blockTime']
+
+    def time(self) -> time:
         return time.gmtime(self.result['blockTime'])
 
     @cached_property

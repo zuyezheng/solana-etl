@@ -1,18 +1,15 @@
 from unittest import TestCase
 
+from src.load.FileOutput import FileOutput
+
 
 class TestFileOutput(TestCase):
 
     def test_with_local_cluster(self):
-        class Foo:
-
-            def __init__(self, var_a, var_b):
-                print(var_a, var_b)
-
-        def foo_gen(**kwargs):
-            kwargs['var_b'] = 'world'
-            return Foo(**kwargs)
-
-        foo_gen(var_a='hello')
+        with FileOutput.with_local_cluster(
+            '/mnt/nvme_raid/scratch/dask',
+            blocks_dir='/mnt/storage/datasets/sol/raw/110280000'
+        ) as output:
+            output.write_transfers('/mnt/scratch_raid/solana/transformed')
 
         self.fail()
