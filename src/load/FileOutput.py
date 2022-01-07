@@ -17,6 +17,11 @@ from src.transform.Interaction import Transfer
 from src.transform.Interactions import Interactions
 
 
+class FileOutputFormat(Enum):
+    CSV = auto()
+    PARQUET = auto()
+
+
 class FileOutput:
     """
     Output block information to file.
@@ -72,32 +77,53 @@ class FileOutput:
 
         return rows
 
-    def write_transfers(self, destination: str, keep_subdir: bool = False):
+    def write_transfers(
+        self,
+        destination_dir: str,
+        destination_format: FileOutputFormat = FileOutputFormat.CSV,
+        keep_subdirs: bool = False
+    ):
         """
         Extract transfers from all blocks to file. Optionally keep subdirectory file structure.
         """
-        # build out the tuples
-        blocks_path = Path(self.blocks_dir)
-        blocks_path.iterdir()
+        def build_glob(path: Path) -> str:
+            return f'{str(path)}/*.json.gz'
 
-        bag.read_text(f'{self.blocks_dir}/*.json.gz', files_per_partition=10) \
-            .map(FileOutput.str_to_transfer_rows) \
-            .flatten() \
-            .to_dataframe(meta=[
-                ('time', 'int64'),
-                ('source', 'string'),
-                ('destination', 'string'),
-                ('value', 'int64'),
-                ('scale', 'int8'),
-                ('transaction', 'string')
-            ]) \
-            .to_parquet(f'{destination}/transfers')
-        #.to_csv(f'{destination}/transfers.csv', index=False, single_file=True)
+        # build out the tuples of destination name and block source glob
+        to_process = []
+        if self._has_subdirs:
+            if keep_subdirs:
+                for subdir_path in self.blocks_path.iterdir():
+                    to_process.append([f'transfers_{subdir_path.name}', build_glob(subdir_path)])
+            else:
+                # need to build multiple globs since bags don't support **/*
+                to_process.append([
+                    'transfers',
+                    list(map(
+                        build_glob,
+                        [subdir_path for subdir_path in self.blocks_path.iterdir()]
+                    ))
+                ])
+        else:
+            to_process.append(['transfers', build_glob(self.blocks_path)])
 
+        for destination_name, source_glob in to_process:
+            to_df = bag.read_text(source_glob, files_per_partition=20) \
+                .map(FileOutput.str_to_transfer_rows) \
+                .flatten() \
+                .to_dataframe(meta=[
+                    ('time', 'int64'),
+                    ('source', 'string'),
+                    ('destination', 'string'),
+                    ('value', 'int64'),
+                    ('scale', 'int8'),
+                    ('transaction', 'string')
+                ])
 
-class FileOutputFormat(Enum):
-    CSV: auto()
-    PARQUET: auto()
+            if destination_format == FileOutputFormat.PARQUET:
+                to_df.to_parquet(f'{destination_dir}/{destination_name}')
+            else:
+                to_df.to_csv(f'{destination_dir}/{destination_name}.csv', index=False, single_file=True)
 
 
 if __name__ == '__main__':
