@@ -102,18 +102,39 @@ class Transaction:
     @cached_property
     def token_balance_changes(self) -> Dict[Account, TokenBalanceChange]:
         """ Token changes by account. """
-        changes = {}
 
-        pre_balances = self.pre_token_balances()
-        post_balances = self.post_token_balances()
-        for i, pre in enumerate(pre_balances):
-            cur_account = self.accounts.get_index(pre['accountIndex'])
+        # for token balances, if a new account is created it will not be included in pre, if an account is closed it
+        # will not be in post so map it by account index
+        def balances_by_index(balances: List[Dict[str, any]]) -> Dict[int, Dict[str, any]]:
+            return dict(map(
+                lambda b: (b['accountIndex'], b),
+                balances
+            ))
+
+        pre_balances = balances_by_index(self.pre_token_balances())
+        post_balances = balances_by_index(self.post_token_balances())
+
+        # set of all account indices across pre and post
+        account_indices = pre_balances.keys() | post_balances.keys()
+
+        changes = {}
+        for index in account_indices:
+            cur_account = self.accounts.get_index(index)
+
+            # start or end value are 0 if missing pre or post
+            start = 0
+            end = 0
+
+            if index in pre_balances:
+                balance = pre_balances[index]
+                start = int(balance['uiTokenAmount']['amount'])
+
+            if index in post_balances:
+                balance = post_balances[index]
+                end = int(balance['uiTokenAmount']['amount'])
+
             changes[cur_account] = TokenBalanceChange(
-                cur_account,
-                pre['mint'],
-                int(pre['uiTokenAmount']['amount']),
-                int(post_balances[i]['uiTokenAmount']['amount']),
-                pre['uiTokenAmount']['decimals']
+                cur_account, balance['mint'], start, end, balance['uiTokenAmount']['decimals']
             )
 
         return changes

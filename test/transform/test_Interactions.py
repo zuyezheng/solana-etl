@@ -3,6 +3,7 @@ from pathlib import Path
 
 from src.parse.Block import Block
 from src.transform.Interactions import Interactions
+from src.transform.Transfer import CoinTransfer, TokenTransfer
 
 
 class TestInteractions(unittest.TestCase):
@@ -12,5 +13,7 @@ class TestInteractions(unittest.TestCase):
         cls._block = Block.open(Path(f'resources/blocks/110130000/110130000.json.gz'))
 
     def test_transfers(self):
-        transfers = Interactions([self._block])
-        self.assertEqual(322, len(transfers))
+        transfers_by_type = Interactions([self._block]).by_type()
+
+        self.assertEqual(322, len(transfers_by_type[CoinTransfer]))
+        self.assertEqual(73, len(transfers_by_type[TokenTransfer]))

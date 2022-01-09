@@ -14,6 +14,10 @@ class NumberWithScale:
     v: int
     scale: int
 
+    @staticmethod
+    def lamports(v: int):
+        return NumberWithScale(v, 9)
+
     def __abs__(self) -> NumberWithScale:
         return NumberWithScale(abs(self.v), self.scale)
 
