@@ -52,10 +52,13 @@ class Block:
     @cached_property
     def transactions(self) -> Transactions:
         """ Parse and return all transactions in the block. """
-        return Transactions(list(map(
-            lambda t: Transaction(t),
-            self.result['transactions']
-        )))
+        if self.has_transactions():
+            return Transactions(list(map(
+                lambda t: Transaction(t),
+                self.result['transactions']
+            )))
+        else:
+            return Transactions([])
 
     def find_transaction(self, signature: str) -> Transaction | None:
         """ Linear search for an instruction with the given signature. """

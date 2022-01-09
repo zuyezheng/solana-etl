@@ -12,7 +12,7 @@ class TestInstruction(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        block = Block.open(Path(f'resources/110130000.json.gz'))
+        block = Block.open(Path(f'resources/blocks/110130000/110130000.json.gz'))
         cls._interesting_transaction = block.find_transaction(
             '2XMqtpXpp83pupsM5iiie2s69iRTHrV6oA6zxDTY9hRC4M2Rr9Yh5knSkBZbk22Wt7Qv88akacJifnaX6oL5ncqS'
         )

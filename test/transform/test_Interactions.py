@@ -9,7 +9,7 @@ class TestInteractions(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._block = Block.open(Path(f'resources/110130000.json.gz'))
+        cls._block = Block.open(Path(f'resources/blocks/110130000/110130000.json.gz'))
 
     def test_transfers(self):
         transfers = Interactions([self._block])
