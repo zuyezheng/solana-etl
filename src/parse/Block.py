@@ -7,8 +7,8 @@ from functools import cached_property
 from pathlib import Path
 from typing import Dict
 
-from src.Transaction import Transaction
-from src.Transactions import Transactions
+from src.parse.Transaction import Transaction
+from src.parse.Transactions import Transactions
 
 
 class Block:
@@ -43,16 +43,22 @@ class Block:
     def has_transactions(self) -> bool:
         return not self.missing and len(self.result['transactions']) > 0
 
-    def block_time(self) -> time:
+    def epoch(self) -> int:
+        return self.result['blockTime']
+
+    def time(self) -> time:
         return time.gmtime(self.result['blockTime'])
 
     @cached_property
     def transactions(self) -> Transactions:
         """ Parse and return all transactions in the block. """
-        return Transactions(list(map(
-            lambda t: Transaction(t),
-            self.result['transactions']
-        )))
+        if self.has_transactions():
+            return Transactions(list(map(
+                lambda t: Transaction(t),
+                self.result['transactions']
+            )))
+        else:
+            return Transactions([])
 
     def find_transaction(self, signature: str) -> Transaction | None:
         """ Linear search for an instruction with the given signature. """

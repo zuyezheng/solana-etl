@@ -4,8 +4,8 @@ from abc import abstractmethod
 from functools import reduce, cached_property
 from typing import Dict, List, Set, Optional
 
-from src.Account import Account
-from src.Accounts import Accounts
+from src.parse.Account import Account
+from src.parse.Accounts import Accounts
 
 
 class Instruction:
@@ -15,9 +15,9 @@ class Instruction:
 
     @author zuyezheng
     """
+
     program_key: str
     inner_instructions: Instructions
-    size: int
 
     # all accounts used in this and inner instructions
     accounts: Set[Account]
@@ -50,12 +50,12 @@ class Instruction:
         gen_id: str = None
     ):
         self.inner_instructions = inner_instructions
-        self.size = self.inner_instructions.size + 1
-
         self.accounts = accounts
         self.program = program
-
         self.gen_id = gen_id
+
+    def __len__(self):
+        return len(self.inner_instructions) + 1
 
     @cached_property
     def programs(self) -> Set[Account]:
@@ -100,6 +100,7 @@ class Instruction:
 
 class PartiallyParsedInstruction(Instruction):
     """ Instruction where we only know about the accounts and program involved and not the actual operations. """
+
     data: str
 
     @staticmethod
@@ -140,8 +141,9 @@ class PartiallyParsedInstruction(Instruction):
 
 
 class ParsedInstruction(Instruction):
+
     program_name: str
-    instruction_type: str
+    instruction_type: Optional[str]
     info_accounts: Dict[str, Account]
     info_values: Dict[str, any]
 
@@ -154,21 +156,29 @@ class ParsedInstruction(Instruction):
         # need to do some work to figure out which of the arguments are account keys
         info_accounts = {}
         info_values = {}
-        for info_key, info_value in json_data['parsed']['info'].items():
-            # see if the value is an account key or another instruction argument, probably should look deeper into
-            # nested object arguments, but seems to cover all current use cases
-            account = all_accounts.get(info_value) if isinstance(info_value, str) else None
 
-            if account is None:
-                info_values[info_key] = info_value
-            else:
-                info_accounts[info_key] = account
+        if isinstance(json_data['parsed'], dict):
+            # most parsed instructions will be a json dict with value and accounts
+            instruction_type = json_data['parsed']['type']
+            for info_key, info_value in json_data['parsed']['info'].items():
+                # see if the value is an account key or another instruction argument, probably should look deeper into
+                # nested object arguments, but seems to cover all current use cases
+                account = all_accounts.get(info_value) if isinstance(info_value, str) else None
+
+                if account is None:
+                    info_values[info_key] = info_value
+                else:
+                    info_accounts[info_key] = account
+        else:
+            # programs like spl-memo will just have an encoded value in parsed
+            instruction_type = None
+            info_values[None] = json_data['parsed']
 
         return ParsedInstruction(
             all_accounts[json_data['programId']],
             inner_instructions,
             json_data['program'],
-            json_data['parsed']['type'],
+            instruction_type,
             info_accounts,
             info_values
         )
@@ -178,7 +188,7 @@ class ParsedInstruction(Instruction):
         program: Account,
         inner_instructions: Optional[Instructions],
         program_name: str,
-        instruction_type: str,
+        instruction_type: Optional[str],
         info_accounts: Dict[str, Account],
         info_values: Dict[str, any],
         gen_id: Optional[str] = None
@@ -215,25 +225,30 @@ class Instructions:
     """
     Some helpers to work on a collection of instructions.
     """
+
     instructions: List[Instruction]
-    size: int
+
+    _len: int
 
     def __init__(self, instructions: List[Instruction]):
         self.instructions = instructions
 
-        self.size = sum(map(lambda i: i.size, self.instructions))
+        self._len = sum(map(lambda i: len(i), self.instructions))
 
     def __iter__(self):
         return self.instructions.__iter__()
 
     def __bool__(self):
-        return self.size > 0
+        return self._len > 0
 
     def __add__(self, other):
         if isinstance(other, Instructions):
             return Instructions(self.instructions + other.instructions)
 
         return NotImplemented
+
+    def __len__(self):
+        return self._len
 
     def set_ids(self, parent: Optional[str] = None) -> Instructions:
         """ Recursively generate ids for outer and any inner instructions given their index. """

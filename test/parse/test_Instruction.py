@@ -1,17 +1,18 @@
 import unittest
 from pathlib import Path
 
-from ProgramInstruction import ProgramInstruction
-from src.Block import Block
-from src.Transaction import Transaction
+from src.parse.ProgramInstruction import ProgramInstruction
+from src.parse.Block import Block
+from src.parse.Transaction import Transaction
 
 
-class BlockTest(unittest.TestCase):
+class TestInstruction(unittest.TestCase):
+
     _interesting_transaction: Transaction
 
     @classmethod
     def setUpClass(cls):
-        block = Block.open(Path(f'test/resources/110130000.json.gz'))
+        block = Block.open(Path(f'resources/blocks/110130000/110130000.json.gz'))
         cls._interesting_transaction = block.find_transaction(
             '2XMqtpXpp83pupsM5iiie2s69iRTHrV6oA6zxDTY9hRC4M2Rr9Yh5knSkBZbk22Wt7Qv88akacJifnaX6oL5ncqS'
         )
@@ -19,7 +20,7 @@ class BlockTest(unittest.TestCase):
     def test_properties(self):
         self.assertEqual(
             21,
-            self._interesting_transaction.instructions.size,
+            len(self._interesting_transaction.instructions),
             'Size should be count of outer and inner instructions.'
         )
 
@@ -38,7 +39,7 @@ class BlockTest(unittest.TestCase):
     def test_flatten(self):
         flattened = self._interesting_transaction.instructions.flatten()
 
-        self.assertEqual(21, flattened.size, 'Flattened including inner should have the same number of instructions.')
+        self.assertEqual(21, len(flattened), 'Flattened including inner should have the same number of instructions.')
 
         self.assertEqual(
             [
@@ -75,7 +76,7 @@ class BlockTest(unittest.TestCase):
             ],
             list(map(lambda instruction: instruction.gen_id, filtered.flatten()))
         )
-        self.assertEqual(6, filtered.size)
+        self.assertEqual(6, len(filtered))
 
         # flatten before filtering will exclude outer instructions
         filtered = ProgramInstruction.SYSTEM_TRANSFER.filter(self._interesting_transaction.instructions, True)
@@ -86,4 +87,4 @@ class BlockTest(unittest.TestCase):
             ],
             list(map(lambda instruction: instruction.gen_id, filtered.flatten()))
         )
-        self.assertEqual(4, filtered.size)
+        self.assertEqual(4, len(filtered))

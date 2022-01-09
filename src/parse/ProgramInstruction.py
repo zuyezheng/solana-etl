@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from Instruction import Instructions
+from src.parse.Instruction import Instructions, Instruction
 
 
 class ProgramInstruction(Enum):
@@ -10,11 +10,15 @@ class ProgramInstruction(Enum):
 
     @author zuyezheng
     """
+
     SYSTEM = 'system'
     SYSTEM_TRANSFER = ('system', 'transfer')
     SYSTEM_ALLOCATE = ('system', 'allocate')
     SYSTEM_ASSIGN = ('system', 'assign')
     SYSTEM_CREATE_ACCOUNT = ('system', 'createAccount')
+
+    SPL = 'spl-token'
+    SPL_TRANSFER = ('spl-token', 'transfer')
 
     program_name: str
     instruction_type: Optional[str]
@@ -25,3 +29,6 @@ class ProgramInstruction(Enum):
 
     def filter(self, instructions: Instructions, flatten: bool = False) -> Instructions:
         return instructions.filter(self.program_name, self.instruction_type, flatten)
+
+    def of(self, instruction: Instruction) -> bool:
+        return instruction.is_of(self.program_name, self.instruction_type)

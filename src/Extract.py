@@ -96,7 +96,7 @@ class Extract:
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description='Dump solana blocks counting backwards.')
+    parser = ArgumentParser(description='Extract solana blocks from rpc.')
 
     parser.add_argument(
         'output_loc',

@@ -1,6 +1,6 @@
 from typing import List, Dict, Iterable, Set, Optional, Union
 
-from src.Account import Account
+from src.parse.Account import Account
 
 
 class Accounts:
@@ -9,6 +9,7 @@ class Accounts:
 
     @author zuyezheng
     """
+
     transaction_signature: str
 
     _accounts: List[Account]

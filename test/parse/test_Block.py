@@ -1,19 +1,20 @@
 import unittest
 from pathlib import Path
 
-from src.BalanceChange import BalanceChangeAgg
-from src.Block import Block
-from src.Transaction import Transaction
+from src.parse.BalanceChange import BalanceChangeAgg
+from src.parse.Block import Block
+from src.parse.Transaction import Transaction
 
 
-class BlockTest(unittest.TestCase):
+class TestBlock(unittest.TestCase):
+
     _block: Block
     _interesting_transaction: Transaction
     _transaction_with_tokens: Transaction
 
     @classmethod
     def setUpClass(cls):
-        cls._block = Block.open(Path(f'test/resources/110130000.json.gz'))
+        cls._block = Block.open(Path(f'resources/blocks/110130000/110130000.json.gz'))
         cls._interesting_transaction = cls._block.find_transaction(
             '2XMqtpXpp83pupsM5iiie2s69iRTHrV6oA6zxDTY9hRC4M2Rr9Yh5knSkBZbk22Wt7Qv88akacJifnaX6oL5ncqS'
         )
