@@ -15,5 +15,6 @@ class TestInteractions(unittest.TestCase):
     def test_transfers(self):
         transfers_by_type = Interactions([self._block]).by_type()
 
+        # make sure we get the right number of transfers for each
         self.assertEqual(322, len(transfers_by_type[CoinTransfer]))
         self.assertEqual(73, len(transfers_by_type[TokenTransfer]))

@@ -10,12 +10,11 @@ from typing import List
 
 import dask
 import dask.bag as bag
-from dask import delayed
 from distributed import LocalCluster, Client
 
 from src.parse.Block import Block
-from src.transform.Interaction import Transfer
 from src.transform.Interactions import Interactions
+from src.transform.Transfer import Transfer
 
 
 class FileOutputFormat(Enum):
@@ -139,22 +138,22 @@ class FileOutput:
             errors = transfers_with_errors.map(lambda t_e: t_e[1]) \
                 .flatten() \
                 .to_dataframe(meta=[
-                    ('error', 'string'),
-                    ('path', 'string')
-                ]) \
+                ('error', 'string'),
+                ('path', 'string')
+            ]) \
                 .to_csv(f'{destination}_errors.csv', index=False, single_file=True, compute=False)
 
             transfers = transfers_with_errors.map(lambda t_e: t_e[0]) \
                 .flatten() \
                 .to_dataframe(meta=[
-                    ('time', 'int64'),
-                    ('source', 'string'),
-                    ('destination', 'string'),
-                    ('value', 'int64'),
-                    ('scale', 'int8'),
-                    ('transaction', 'string'),
-                    ('path', 'string')
-                ])
+                ('time', 'int64'),
+                ('source', 'string'),
+                ('destination', 'string'),
+                ('value', 'int64'),
+                ('scale', 'int8'),
+                ('transaction', 'string'),
+                ('path', 'string')
+            ])
             if destination_format == FileOutputFormat.PARQUET:
                 transfers = transfers.to_parquet(destination, compute=False)
             else:
