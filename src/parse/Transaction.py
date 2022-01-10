@@ -4,6 +4,7 @@ from functools import cached_property, reduce
 from typing import Dict, List, Set
 
 from src.parse.Account import Account
+from src.parse.AccountType import AccountType
 from src.parse.Accounts import Accounts
 from src.parse.BalanceChange import TokenBalanceChange, AccountBalanceChange, BalanceChangeAgg
 from src.parse.Instruction import Instructions, Instruction
@@ -155,3 +156,23 @@ class Transaction:
     def mints(self) -> Set[str]:
         """ All token mints in the transaction. """
         return {change.mint for change in self.token_balance_changes.values()}
+
+    @cached_property
+    def accounts_by_type(self) -> Dict[AccountType, Set[Account]]:
+        program_accounts = self.instructions.programs
+        token_accounts = set(self.token_balance_changes.keys())
+
+        sysvar_accounts = set()
+        coin_accounts = set()
+        for account in self.accounts:
+            if account.key.lower().startswith('sysvar'):
+                sysvar_accounts.add(account)
+            elif account not in program_accounts and account not in token_accounts:
+                coin_accounts.add(account)
+
+        return {
+            AccountType.SYSVAR: sysvar_accounts,
+            AccountType.PROGRAM: program_accounts,
+            AccountType.TOKEN: token_accounts,
+            AccountType.COIN: coin_accounts
+        }

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from enum import Enum
 from typing import Dict, Optional, Union
 
 
@@ -36,13 +35,3 @@ class Account:
             return self.key == other.key
 
         return NotImplemented
-
-
-class AccountType(Enum):
-    ADDRESS_MAP = 0
-    SYSVAR = 1
-    PROGRAM = 2
-    TOKEN_PROGRAM = 3
-    MINT = 4
-    TOKEN_ACCOUNT = 5
-    ACCOUNT = 6

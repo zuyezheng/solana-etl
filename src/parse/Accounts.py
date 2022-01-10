@@ -41,6 +41,12 @@ class Accounts:
         """ Get account by public key. """
         return self._accounts_by_key[key]
 
+    def __len__(self):
+        return len(self._accounts)
+
+    def keys(self) -> Iterable[str]:
+        return self._accounts_by_key.keys()
+
     def get(self, key: any) -> Optional[Account]:
         return self._accounts_by_key.get(key)
 
