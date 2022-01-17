@@ -39,10 +39,12 @@ class Transaction:
 
         return NotImplemented
 
-    def is_successful(self):
+    @property
+    def is_successful(self) -> bool:
         return self.meta['err'] is None
 
-    def fee(self):
+    @property
+    def fee(self) -> int:
         return self.meta['fee']
 
     def pre_balances(self) -> List[int]:

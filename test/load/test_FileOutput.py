@@ -18,7 +18,8 @@ class TestFileOutput(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        shutil.rmtree(cls._test_output_path)
+        #shutil.rmtree(cls._test_output_path)
+        pass
 
     def test_transfers(self):
         output_path = self._test_output_path.joinpath('transfers')
@@ -35,7 +36,7 @@ class TestFileOutput(TestCase):
             [110360000, 196]
         ]
         for block_section, num_transfers in expected:
-            df = pandas.read_csv(output_path.joinpath(f'transfers_{str(block_section)}.csv'))
-            self.assertEqual((num_transfers, 7), df.shape)
-            errors = pandas.read_csv(output_path.joinpath(f'transfers_{str(block_section)}_errors.csv'))
-            self.assertEqual((0, 2), errors.shape)
+            df = pandas.read_csv(output_path.joinpath(f'{str(block_section)}_transfers.csv'))
+            self.assertEqual((num_transfers, 8), df.shape)
+            errors = pandas.read_csv(output_path.joinpath(f'{str(block_section)}_errors.csv'))
+            self.assertEqual((0, 3), errors.shape)
