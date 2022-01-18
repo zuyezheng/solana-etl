@@ -17,22 +17,7 @@ from src.parse.Block import Block
 from src.transform.Interactions import Interactions
 from src.transform.Transfer import Transfer
 
-
-class FileOutputFormat(Enum):
-    CSV = auto()
-    PARQUET = auto()
-
-
-class FileOutputTasks(Enum):
-    TRANSACTIONS = auto(
-        FileOutput.blocks_to_transactions,
-
-    )
-    TRANSFERS = auto()
-
-    def __init__(self, block_to: Callable[[Block], meta: List[List[any]], List[List[any]]):
-        self.block_to = block_to
-        self.meta = meta
+ResultsAndErrors = (List[List[any]], List[List[any]])
 
 
 class FileOutput:
@@ -88,7 +73,7 @@ class FileOutput:
         return block, errors
 
     @staticmethod
-    def blocks_to_transactions(block: Block) -> (List[List[any]], List[List[any]]):
+    def blocks_to_transactions(block: Block) -> ResultsAndErrors:
         rows = []
         errors = []
 
@@ -112,8 +97,10 @@ class FileOutput:
                     transaction.total_account_balance_change(BalanceChangeAgg.IN).v,
                     json.dumps(len(transaction.mints)),
                     json.dumps(list(transaction.mints)),
-                    json.dumps({mint: change.float for mint, change in transaction.total_token_changes(BalanceChangeAgg.OUT).items()}),
-                    json.dumps({mint: change.float for mint, change in transaction.total_token_changes(BalanceChangeAgg.IN).items()}),
+                    json.dumps({mint: change.float for mint, change in
+                                transaction.total_token_changes(BalanceChangeAgg.OUT).items()}),
+                    json.dumps({mint: change.float for mint, change in
+                                transaction.total_token_changes(BalanceChangeAgg.IN).items()}),
                     block.hash,
                     str(block.path)
                 ])
@@ -123,7 +110,7 @@ class FileOutput:
         return rows, errors
 
     @staticmethod
-    def blocks_to_transfers(block: Block) -> (List[List[any]], List[List[any]]):
+    def blocks_to_transfers(block: Block) -> ResultsAndErrors:
         """
         For each block, return a tuple of rows of parsed transfers and rows of errors.
         """
@@ -186,14 +173,15 @@ class FileOutput:
 
     def write(
         self,
-        tasks: Set[FileOutputTasks],
+        tasks: Set[FileOutputTask],
         destination_dir: str,
-        destination_format: FileOutputFormat = FileOutputFormat.CSV,
+        destination_format: FileOutputFormat,
         keep_subdirs: bool = False
     ):
         """
         Extract transfers from all blocks to file. Optionally keep subdirectory file structure.
         """
+
         def to_file(source, destination: Path, extract_type: str):
             base_path = f'{str(destination)}_{extract_type}'
 
@@ -207,50 +195,20 @@ class FileOutput:
                 .map(FileOutput.json_to_blocks)
             blocks = blocks_with_errors.map(lambda r: r[0])
 
-            transactions_with_errors = blocks.map(FileOutput.blocks_to_transactions)
-            transactions = transactions_with_errors.map(lambda r: r[0]) \
-                .flatten() \
-                .to_dataframe(meta=[
-                    ('time', 'int64'),
-                    ('signature', 'string'),
-                    ('fee', 'int64'),
-                    ('isSuccessful', 'bool'),
-                    ('numInstructions', 'int8'),
-                    ('programs', 'str'),
-                    ('numAccounts', 'int8'),
-                    ('accountsByType', 'string'),
-                    ('lamportsOut', 'int64'),
-                    ('lamportsIn', 'int64'),
-                    ('numMints', 'int8'),
-                    ('mints', 'string'),
-                    ('tokensOut', 'string'),
-                    ('tokensIn', 'string'),
-                    ('blockhash', 'string'),
-                    ('path', 'string')
-                ])
-            transactions = to_file(transactions, destination, 'transactions')
+            task_results = []
+            task_errors = [blocks_with_errors.map(lambda r: r[1])]
+            for task in tasks:
+                results_with_errors = blocks.map(task.transform)
 
-            transfers_with_errors = blocks.map(FileOutput.blocks_to_transfers)
-            transfers = transfers_with_errors.map(lambda r: r[0]) \
-                .flatten() \
-                .to_dataframe(meta=[
-                    ('time', 'int64'),
-                    ('source', 'string'),
-                    ('destination', 'string'),
-                    ('value', 'int64'),
-                    ('scale', 'int8'),
-                    ('transaction', 'string'),
-                    ('blockhash', 'string'),
-                    ('path', 'string')
-                ])
-            transfers = to_file(transfers, destination, 'transfers')
+                task_results.append(to_file(
+                    results_with_errors.map(lambda r: r[0]).flatten().to_dataframe(meta=task.meta),
+                    destination,
+                    str(task.name).lower()
+                ))
+                task_errors.append(results_with_errors.map(lambda r: r[1]))
 
             # concat errors across multiple stages
-            errors = bag.concat([
-                blocks_with_errors.map(lambda r: r[1]),
-                transactions_with_errors.map(lambda r: r[1]),
-                transfers_with_errors.map(lambda r: r[1])
-            ]).flatten() \
+            errors = bag.concat(task_errors).flatten() \
                 .to_dataframe(meta=[
                     ('source', 'string'),
                     ('error', 'string'),
@@ -259,7 +217,53 @@ class FileOutput:
                 .to_csv(f'{destination}_errors.csv', index=False, single_file=True, compute=False)
 
             # defer compute of both results so dask will know to reuse intermediate results
-            dask.compute(transactions, transfers, errors)
+            dask.compute(*task_results, errors)
+
+
+class FileOutputFormat(Enum):
+    CSV = auto()
+    PARQUET = auto()
+
+
+class FileOutputTask(Enum):
+    TRANSACTIONS = (
+        FileOutput.blocks_to_transactions,
+        [
+            ('time', 'int64'),
+            ('signature', 'string'),
+            ('fee', 'int64'),
+            ('isSuccessful', 'bool'),
+            ('numInstructions', 'int8'),
+            ('programs', 'str'),
+            ('numAccounts', 'int8'),
+            ('accountsByType', 'string'),
+            ('lamportsOut', 'int64'),
+            ('lamportsIn', 'int64'),
+            ('numMints', 'int8'),
+            ('mints', 'string'),
+            ('tokensOut', 'string'),
+            ('tokensIn', 'string'),
+            ('blockhash', 'string'),
+            ('path', 'string')
+        ]
+    )
+    TRANSFERS = (
+        FileOutput.blocks_to_transfers,
+        [
+            ('time', 'int64'),
+            ('source', 'string'),
+            ('destination', 'string'),
+            ('value', 'int64'),
+            ('scale', 'int8'),
+            ('transaction', 'string'),
+            ('blockhash', 'string'),
+            ('path', 'string')
+        ]
+    )
+
+    def __init__(self, transform: Callable[[Block], ResultsAndErrors], meta: List[(str, str)]):
+        self.transform = transform
+        self.meta = meta
 
 
 if __name__ == '__main__':

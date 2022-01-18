@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import pandas
 
-from src.load.FileOutput import FileOutput, FileOutputFormat
+from src.load.FileOutput import FileOutput, FileOutputFormat, FileOutputTask
 
 
 class TestFileOutput(TestCase):
@@ -18,13 +18,14 @@ class TestFileOutput(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        #shutil.rmtree(cls._test_output_path)
+        shutil.rmtree(cls._test_output_path)
         pass
 
     def test_transfers(self):
         output_path = self._test_output_path.joinpath('transfers')
         with FileOutput.with_local_cluster(temp_dir='.', blocks_dir='resources/blocks') as output:
-            output.write_transfers(
+            output.write(
+                [FileOutputTask.TRANSACTIONS, FileOutputTask.TRANSFERS],
                 output_path,
                 destination_format=FileOutputFormat.CSV,
                 keep_subdirs=True
