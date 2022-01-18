@@ -181,15 +181,6 @@ class FileOutput:
         """
         Extract transfers from all blocks to file. Optionally keep subdirectory file structure.
         """
-
-        def to_file(source, destination: Path, extract_type: str):
-            base_path = f'{str(destination)}_{extract_type}'
-
-            if destination_format == FileOutputFormat.PARQUET:
-                return source.to_parquet(base_path, compute=False)
-            else:
-                return source.to_csv(f'{base_path}.csv', index=False, single_file=True, compute=False)
-
         for source, destination in self.source_and_destinations(destination_dir, keep_subdirs):
             blocks_with_errors = bag.read_text(source, include_path=True, files_per_partition=20) \
                 .map(FileOutput.json_to_blocks)
@@ -200,11 +191,14 @@ class FileOutput:
             for task in tasks:
                 results_with_errors = blocks.map(task.transform)
 
-                task_results.append(to_file(
-                    results_with_errors.map(lambda r: r[0]).flatten().to_dataframe(meta=task.meta),
-                    destination,
-                    str(task.name).lower()
-                ))
+                results = results_with_errors.map(lambda r: r[0]).flatten().to_dataframe(meta=task.meta)
+                base_path = f'{str(destination)}_{str(task.name).lower()}'
+                if destination_format == FileOutputFormat.PARQUET:
+                    results = results.to_parquet(base_path, compute=False)
+                else:
+                    results = results.to_csv(f'{base_path}.csv', index=False, single_file=True, compute=False)
+
+                task_results.append(results)
                 task_errors.append(results_with_errors.map(lambda r: r[1]))
 
             # concat errors across multiple stages
