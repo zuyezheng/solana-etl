@@ -19,7 +19,6 @@ class TestFileOutput(TestCase):
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(cls._test_destination_path)
-        pass
 
     def test_transfers(self):
         destination_path = self._test_destination_path.joinpath('transfers')
@@ -33,8 +32,8 @@ class TestFileOutput(TestCase):
 
         # make sure the outputed files contain the right number of transfers
         expected = [
-            [110130000, 395],
-            [110360000, 196]
+            [110130000, 394],
+            [110360000, 194]
         ]
         for block_section, num_transfers in expected:
             df = pandas.read_csv(destination_path.joinpath(f'{str(block_section)}_transfers.csv'))

@@ -4,12 +4,13 @@ import json
 import multiprocessing
 from argparse import ArgumentParser
 from contextlib import contextmanager
-from enum import Enum, auto
+from enum import Enum
 from pathlib import Path
 from typing import List, Set, Callable, Iterable
 
 import dask
 import dask.bag as bag
+from dask.delayed import Delayed
 from distributed import LocalCluster, Client
 
 from src.parse.BalanceChange import BalanceChangeAgg
@@ -84,8 +85,7 @@ class FileOutput:
         rows = []
         errors = []
 
-        transactions = block.transactions
-        for transaction in transactions:
+        for transaction in block.transactions:
             try:
                 rows.append([
                     block.epoch(),
@@ -198,15 +198,12 @@ class FileOutput:
             task_errors = [blocks_with_errors.map(lambda r: r[1])]
             for task in tasks:
                 results_with_errors = blocks.map(task.transform)
-
-                results = results_with_errors.map(lambda r: r[0]).flatten().to_dataframe(meta=task.meta)
                 base_path = f'{str(destination)}_{str(task.name).lower()}'
-                if destination_format == FileOutputFormat.PARQUET:
-                    results = results.to_parquet(base_path, compute=False)
-                else:
-                    results = results.to_csv(f'{base_path}.csv', index=False, single_file=True, compute=False)
 
-                task_results.append(results)
+                task_results.append(destination_format.to_file(
+                    results_with_errors.map(lambda r: r[0]).flatten().to_dataframe(meta=task.meta),
+                    base_path
+                ))
                 task_errors.append(results_with_errors.map(lambda r: r[1]))
 
             # concat errors across multiple stages
@@ -216,18 +213,24 @@ class FileOutput:
                     ('error', 'string'),
                     ('path', 'string')
                 ])
-            if destination_format == FileOutputFormat.PARQUET:
-                errors = errors.to_parquet(f'{destination}_errors', compute=False)
-            else:
-                errors = errors.to_csv(f'{destination}_errors.csv', index=False, single_file=True, compute=False)
+            errors = destination_format.to_file(errors, f'{destination}_errors')
 
             # defer compute of both results so dask will know to reuse intermediate results
             dask.compute(*task_results, errors)
 
 
 class FileOutputFormat(Enum):
-    CSV = auto()
-    PARQUET = auto()
+    CSV = (
+        lambda delayed, path: delayed.to_csv(f'{path}.csv', index=False, single_file=True, compute=False), 0
+    )
+    PARQUET = (
+        lambda delayed, path: delayed.to_parquet(f'{path}', compute=False), 1
+    )
+
+    to_file: Callable[[Delayed, str], Delayed]
+
+    def __init__(self, to_file: Callable[[Delayed, str], Delayed], _):
+        self.to_file = to_file
 
 
 class FileOutputTask(Enum):
@@ -266,6 +269,9 @@ class FileOutputTask(Enum):
         ]
     )
 
+    transform: Callable[[Block], ResultsAndErrors]
+    meta: List[(str, str)]
+
     @staticmethod
     def all() -> Set[FileOutputTask]:
         return set([task for task in FileOutputTask])
@@ -301,8 +307,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    tasks = FileOutputTask.from_names(args.tasks)
-    destination_format = FileOutputFormat[args.destination_format.upper()]
-
     with FileOutput.with_local_cluster(temp_dir=args.temp_dir, blocks_dir=args.blocks_dir) as output:
-        output.write(tasks, args.destination_dir, destination_format, args.keep_subdirs)
+        output.write(
+            FileOutputTask.from_names(args.tasks),
+            args.destination_dir,
+            FileOutputFormat[args.destination_format.upper()],
+            args.keep_subdirs
+        )
