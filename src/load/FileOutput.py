@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from contextlib import contextmanager
 from enum import Enum, auto
 from pathlib import Path
-from typing import List, Set, Callable
+from typing import List, Set, Callable, Iterable
 
 import dask
 import dask.bag as bag
@@ -42,7 +42,13 @@ class FileOutput:
         """
         Create with a new dask client with a local cluster. kwargs should include for FileOutput except for client.
         """
-        with dask.config.set({'temporary_directory': temp_dir}), \
+        config = {
+            'temporary_directory': temp_dir,
+            'distributed.comm.timeouts.connect': '120s',
+            'distributed.comm.timeouts.tcp': '120s'
+        }
+
+        with dask.config.set(config), \
             LocalCluster(n_workers=n_workers, threads_per_worker=1) as cluster, \
             Client(cluster, timeout=120) as client:
             kwargs['client'] = client
@@ -64,10 +70,11 @@ class FileOutput:
         try:
             block = Block(json.loads(json_and_path[0]), Path(json_and_path[1]))
 
-            # execute some lazily cached properties to flush out any errors and so they can be reused downstream
+            # execute some lazily cached properties to be reused downstream and flush out some errors
             for transaction in block.transactions:
                 transaction.instructions
         except Exception as e:
+            block = None
             errors.append(['json_to_blocks', json_and_path[1], str(e)])
 
         return block, errors
@@ -182,9 +189,10 @@ class FileOutput:
         Extract transfers from all blocks to file. Optionally keep subdirectory file structure.
         """
         for source, destination in self.source_and_destinations(destination_dir, keep_subdirs):
-            blocks_with_errors = bag.read_text(source, include_path=True, files_per_partition=20) \
+            blocks_with_errors = bag.read_text(source, include_path=True, files_per_partition=4) \
                 .map(FileOutput.json_to_blocks)
-            blocks = blocks_with_errors.map(lambda r: r[0])
+            # take the blocks and filter out any that are None due to errors
+            blocks = blocks_with_errors.map(lambda r: r[0]).filter(lambda b: b is not None)
 
             task_results = []
             task_errors = [blocks_with_errors.map(lambda r: r[1])]
@@ -207,8 +215,11 @@ class FileOutput:
                     ('source', 'string'),
                     ('error', 'string'),
                     ('path', 'string')
-                ]) \
-                .to_csv(f'{destination}_errors.csv', index=False, single_file=True, compute=False)
+                ])
+            if destination_format == FileOutputFormat.PARQUET:
+                errors = errors.to_parquet(f'{destination}_errors', compute=False)
+            else:
+                errors = errors.to_csv(f'{destination}_errors.csv', index=False, single_file=True, compute=False)
 
             # defer compute of both results so dask will know to reuse intermediate results
             dask.compute(*task_results, errors)
@@ -255,6 +266,22 @@ class FileOutputTask(Enum):
         ]
     )
 
+    @staticmethod
+    def all() -> Set[FileOutputTask]:
+        return set([task for task in FileOutputTask])
+
+    @staticmethod
+    def from_names(names: Iterable[str]) -> Set[FileOutputTask]:
+        tasks = set()
+        for name in names:
+            normalized_name = name.upper()
+            if normalized_name == 'ALL':
+                return FileOutputTask.all()
+            else:
+                tasks.add(FileOutputTask[normalized_name])
+
+        return tasks
+
     def __init__(self, transform: Callable[[Block], ResultsAndErrors], meta: List[(str, str)]):
         self.transform = transform
         self.meta = meta
@@ -262,3 +289,20 @@ class FileOutputTask(Enum):
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Transform and output block information to file.')
+
+    parser.add_argument('--tasks', nargs='+', help='List of tasks to execute or all.', required=True)
+
+    parser.add_argument('--temp_dir', type=str, help='Temp directory for dask when spilling to disk.', required=True)
+    parser.add_argument('--blocks_dir', type=str, help='Source directory for the extracted blocks.', required=True)
+    parser.add_argument('--destination_dir', type=str, help='Where to write the results.', required=True)
+    parser.add_argument('--destination_format', type=str, help='File format of results.', required=True)
+
+    parser.add_argument('--keep_subdirs', help='Produce results for each subdir of source.', action='store_true')
+
+    args = parser.parse_args()
+
+    tasks = FileOutputTask.from_names(args.tasks)
+    destination_format = FileOutputFormat[args.destination_format.upper()]
+
+    with FileOutput.with_local_cluster(temp_dir=args.temp_dir, blocks_dir=args.blocks_dir) as output:
+        output.write(tasks, args.destination_dir, destination_format, args.keep_subdirs)

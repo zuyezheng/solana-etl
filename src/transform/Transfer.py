@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from src.parse.Instruction import ParsedInstruction
 from src.parse.NumberWithScale import NumberWithScale
