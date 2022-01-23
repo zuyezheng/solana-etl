@@ -5,8 +5,9 @@ import multiprocessing
 from argparse import ArgumentParser
 from contextlib import contextmanager
 from enum import Enum
+from functools import partial
 from pathlib import Path
-from typing import List, Set, Callable, Iterable
+from typing import List, Set, Callable, Iterable, Dict, Tuple
 
 import dask
 import dask.bag as bag
@@ -18,7 +19,8 @@ from src.parse.Block import Block
 from src.transform.Interactions import Interactions
 from src.transform.Transfer import Transfer
 
-ResultsAndErrors = (List[List[any]], List[List[any]])
+ResultsAndErrors = Tuple[List[List[any]], List[List[any]]]
+Transform = Callable[[Block], ResultsAndErrors]
 
 
 class FileOutput:
@@ -64,23 +66,6 @@ class FileOutput:
         self._has_subdirs = all(map(lambda p: p.is_dir(), self.blocks_path.iterdir()))
 
     @staticmethod
-    def json_to_blocks(json_and_path: (str, str)) -> (Block, List[List[any]]):
-        errors = []
-        block = None
-
-        try:
-            block = Block(json.loads(json_and_path[0]), Path(json_and_path[1]))
-
-            # execute some lazily cached properties to be reused downstream and flush out some errors
-            for transaction in block.transactions:
-                transaction.instructions
-        except Exception as e:
-            block = None
-            errors.append(['json_to_blocks', json_and_path[1], str(e)])
-
-        return block, errors
-
-    @staticmethod
     def blocks_to_transactions(block: Block) -> ResultsAndErrors:
         rows = []
         errors = []
@@ -109,10 +94,10 @@ class FileOutput:
                     json.dumps({mint: change.float for mint, change in
                                 transaction.total_token_changes(BalanceChangeAgg.IN).items()}),
                     block.hash,
-                    str(block.path)
+                    str(block.path.name)
                 ])
             except Exception as e:
-                errors.append(['blocks_to_transactions', str(block.path), str(e)])
+                errors.append(['blocks_to_transactions', str(block.path.name), str(e)])
 
         return rows, errors
 
@@ -132,16 +117,44 @@ class FileOutput:
                         block.epoch(),
                         interaction.source,
                         interaction.destination,
+                        interaction.mint,
                         interaction.value.v,
                         interaction.value.scale,
                         interaction.transaction_signature,
                         block.hash,
-                        str(block.path)
+                        str(block.path.name)
                     ])
             except Exception as e:
-                errors.append(['blocks_to_transfers', str(block.path), str(e)])
+                errors.append(['blocks_to_transfers', str(block.path.name), str(e)])
 
         return rows, errors
+
+    @staticmethod
+    def transform(
+        tasks: Dict[str, Transform], json_and_path: (str, str)
+    ) -> (Dict[str, List[List[any]]], List[List[any]]):
+        """
+        Perform all the transform tasks on a given block json and aggregate int a tuple of results in a dictionary by
+        task and errors.
+        """
+        block_path = Path(json_and_path[1])
+
+        # default to empty rows for each task for a easy flatten of results vs dealing with Nones
+        results = {task_name: [] for task_name in tasks}
+        errors = []
+
+        try:
+            block = Block(json.loads(json_and_path[0]), block_path)
+
+            # aggregate results and errors for each task
+            for task_name in tasks:
+                results_and_errors = tasks[task_name](block)
+                results[task_name] = results_and_errors[0]
+                errors.extend(results_and_errors[1])
+        except Exception as e:
+            errors.append(['json_to_blocks', block_path.name, str(e)])
+
+        return results, errors
 
     def source_and_destinations(
         self, destination_dir: str, keep_subdirs: bool = False
@@ -189,31 +202,34 @@ class FileOutput:
         Extract transfers from all blocks to file. Optionally keep subdirectory file structure.
         """
         for source, destination in self.source_and_destinations(destination_dir, keep_subdirs):
-            blocks_with_errors = bag.read_text(source, include_path=True, files_per_partition=4) \
-                .map(FileOutput.json_to_blocks)
-            # take the blocks and filter out any that are None due to errors
-            blocks = blocks_with_errors.map(lambda r: r[0]).filter(lambda b: b is not None)
+            # pickling gets tricky with the enum so convert it to a dict with name -> transform
+            transforms = {task.name: task.transform for task in tasks}
 
+            results_with_errors = bag.read_text(source, include_path=True, files_per_partition=16) \
+                .map(lambda json_and_path: FileOutput.transform(transforms, json_and_path))
+
+            # extract out the specific transform results, flatten, and create a delayed task to output to file
             task_results = []
-            task_errors = [blocks_with_errors.map(lambda r: r[1])]
             for task in tasks:
-                results_with_errors = blocks.map(task.transform)
-                base_path = f'{str(destination)}_{str(task.name).lower()}'
-
                 task_results.append(destination_format.to_file(
-                    results_with_errors.map(lambda r: r[0]).flatten().to_dataframe(meta=task.meta),
-                    base_path
+                    results_with_errors
+                        .map(partial(lambda task_name, result: result[0][task_name], task.name))
+                        .flatten()
+                        .to_dataframe(meta=task.meta),
+                    f'{str(destination)}_{str(task.name).lower()}'
                 ))
-                task_errors.append(results_with_errors.map(lambda r: r[1]))
 
-            # concat errors across multiple stages
-            errors = bag.concat(task_errors).flatten() \
-                .to_dataframe(meta=[
-                    ('source', 'string'),
-                    ('error', 'string'),
-                    ('path', 'string')
-                ])
-            errors = destination_format.to_file(errors, f'{destination}_errors')
+            # collect all the errors
+            errors = destination_format.to_file(
+                results_with_errors.map(lambda r: r[1])
+                    .flatten()
+                    .to_dataframe(meta=[
+                        ('source', 'string'),
+                        ('error', 'string'),
+                        ('path', 'string')
+                    ]),
+                f'{destination}_errors'
+            )
 
             # defer compute of both results so dask will know to reuse intermediate results
             dask.compute(*task_results, errors)
@@ -261,6 +277,7 @@ class FileOutputTask(Enum):
             ('time', 'int64'),
             ('source', 'string'),
             ('destination', 'string'),
+            ('mint', 'string'),
             ('value', 'int64'),
             ('scale', 'int8'),
             ('transaction', 'string'),
@@ -269,7 +286,7 @@ class FileOutputTask(Enum):
         ]
     )
 
-    transform: Callable[[Block], ResultsAndErrors]
+    transform: Transform
     meta: List[(str, str)]
 
     @staticmethod
@@ -288,7 +305,7 @@ class FileOutputTask(Enum):
 
         return tasks
 
-    def __init__(self, transform: Callable[[Block], ResultsAndErrors], meta: List[(str, str)]):
+    def __init__(self, transform: Transform, meta: List[(str, str)]):
         self.transform = transform
         self.meta = meta
 
