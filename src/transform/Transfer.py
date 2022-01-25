@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from src.parse.Instruction import ParsedInstruction
 from src.parse.NumberWithScale import NumberWithScale
@@ -16,6 +15,7 @@ class Transfer(Interaction):
     transaction_signature: str
     source: str
     destination: str
+    mint: str
     value: NumberWithScale
 
 
@@ -28,6 +28,7 @@ class CoinTransfer(Transfer):
             transaction_signature=transaction.signature,
             source=instruction.info_accounts['source'].key,
             destination=instruction.info_accounts['destination'].key,
+            mint='sol',
             value=NumberWithScale.lamports(instruction.info_values['lamports'])
         )
 
@@ -36,7 +37,6 @@ class CoinTransfer(Transfer):
 class TokenTransfer(Transfer):
     authority: str
     multisig: bool
-    mint: str
 
     @staticmethod
     def from_instruction(transaction: Transaction, instruction: ParsedInstruction) -> Transfer:
@@ -65,8 +65,8 @@ class TokenTransfer(Transfer):
             transaction_signature=transaction.signature,
             source=source.key,
             destination=destination.key,
+            mint=balance_change.mint,
             value=NumberWithScale(int(instruction.info_values['amount']), balance_change.start.scale),
             authority=authority,
-            multisig=multisig,
-            mint=balance_change.mint
+            multisig=multisig
         )

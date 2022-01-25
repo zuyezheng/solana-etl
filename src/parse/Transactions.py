@@ -22,6 +22,13 @@ class Transactions:
     def __len__(self):
         return len(self.transactions)
 
+    def successful(self) -> List[Transaction]:
+        """ Return only successful transactions. """
+        return list(filter(
+            lambda t: t.is_successful,
+            self.transactions
+        ))
+
     def more_than_fee(self) -> List[Transaction]:
         """ Transactions where absolute balance change was greater than the fee. """
         return list(filter(

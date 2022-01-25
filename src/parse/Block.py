@@ -19,6 +19,7 @@ class Block:
     """
 
     result: Dict[str, any] | None
+    path: Path
     missing: bool
 
     @staticmethod
@@ -30,15 +31,21 @@ class Block:
                 return open(path)
 
         with _open() as f:
-            return Block(json.load(f))
+            return Block(json.load(f), path)
 
-    def __init__(self, block_meta: Dict):
+    def __init__(self, block_meta: Dict, path: Path):
+        self.path = path
+
         if 'result' in block_meta:
             self.result = block_meta['result']
             self.missing = False
         else:
             self.result = None
             self.missing = True
+
+    @property
+    def hash(self) -> str:
+        return self.result['blockhash']
 
     def has_transactions(self) -> bool:
         return not self.missing and len(self.result['transactions']) > 0
