@@ -1,7 +1,7 @@
 from enum import Enum
 
-from src.parse.Account import Account
-from src.parse.NumberWithScale import NumberWithScale
+from src.transform.Account import Account
+from src.transform.NumberWithScale import NumberWithScale
 
 
 class BalanceChange:

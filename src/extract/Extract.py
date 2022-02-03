@@ -1,8 +1,6 @@
-import gzip
 import itertools
-import json
 import time
-from argparse import ArgumentParser
+from abc import abstractmethod
 from pathlib import Path
 
 from solana.rpc.api import Client
@@ -26,7 +24,7 @@ class Extract:
     """
     Extract solana blocks as gzipped JSON and dump to file.
 
-    @author zuye.zheng
+    @author zuyezheng
     """
 
     def __init__(self, endpoint: str, output_loc: str, slots_per_dir: int):
@@ -35,13 +33,6 @@ class Extract:
         self.slots_per_dir = slots_per_dir
 
         self._client = Client(endpoint)
-
-    def slot_path(self, slot: int) -> Path:
-        """ Return the output path for a slot and ensure sub directories exists. """
-        path_loc = self.output_path.joinpath(str(slot//self.slots_per_dir * self.slots_per_dir))
-        path_loc.mkdir(parents=True, exist_ok=True)
-
-        return path_loc.joinpath(f'{slot}.json.gz')
 
     def execute_with_backoff(
         self,
@@ -87,48 +78,14 @@ class Extract:
                 return range(start, end + 1)
 
         for slot in get_slots():
-            slot_info = self.execute_with_backoff(lambda: self.get_block(slot))
-            if slot_info is None:
+            block_json = self.execute_with_backoff(lambda: self.get_block(slot))
+            if block_json is None:
                 print(f'Error fetching info for slot {slot}.')
             else:
-                with gzip.open(self.slot_path(slot), 'w') as f:
-                    f.write(json.dumps(slot_info).encode('utf-8'))
+                self.process_block(slot, block_json)
+
+    @abstractmethod
+    def process_block(self, slot, block_json):
+        raise NotImplemented
 
 
-if __name__ == '__main__':
-    parser = ArgumentParser(description='Extract solana blocks from rpc.')
-
-    parser.add_argument(
-        'output_loc',
-        type=str,
-        help='Where to dump the block responses.'
-    )
-
-    parser.add_argument(
-        '--endpoint',
-        type=str,
-        help='Which net to use.',
-        default='https://api.mainnet-beta.solana.com'
-    )
-    parser.add_argument(
-        '--start',
-        type=int,
-        help='Slot to start extract.'
-    )
-    parser.add_argument(
-        '--end',
-        type=int,
-        help='Slot to end extract, if less than start count down from start, if None keep counting up with backoff.',
-        default=None
-    )
-    parser.add_argument(
-        '--slots_per_dir',
-        type=int,
-        help='Number of slots to chunk into the same directory.',
-        default=10_000
-    )
-
-    args = parser.parse_args()
-
-    extract = Extract(args.endpoint, args.output_loc, args.slots_per_dir)
-    extract.start(args.start, args.end)

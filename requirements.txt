@@ -1,5 +1,6 @@
 anyio==3.4.0
 apischema==0.16.2
+asyncstdlib==3.10.2
 attrs==21.2.0
 base58==2.1.1
 bokeh==2.4.2

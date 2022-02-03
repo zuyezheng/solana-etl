@@ -1,6 +1,6 @@
 from typing import List
 
-from src.parse.Transaction import Transaction
+from src.transform.Transaction import Transaction
 
 
 class Transactions:
@@ -32,14 +32,14 @@ class Transactions:
     def more_than_fee(self) -> List[Transaction]:
         """ Transactions where absolute balance change was greater than the fee. """
         return list(filter(
-            lambda t: t.total_account_balance_change() != t.fee(),
+            lambda t: t.total_account_balance_change() != t.fee,
             self.transactions
         ))
 
     def only_fee(self) -> List[Transaction]:
         """ Transactions where only balance change was the fee. """
         return list(filter(
-            lambda t: t.total_account_balance_change() == t.fee(),
+            lambda t: t.total_account_balance_change() == t.fee,
             self.transactions
         ))
 

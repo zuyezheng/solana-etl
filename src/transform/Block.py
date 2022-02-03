@@ -7,8 +7,8 @@ from functools import cached_property
 from pathlib import Path
 from typing import Dict
 
-from src.parse.Transaction import Transaction
-from src.parse.Transactions import Transactions
+from src.transform.Transaction import Transaction
+from src.transform.Transactions import Transactions
 
 
 class Block:
@@ -19,7 +19,7 @@ class Block:
     """
 
     result: Dict[str, any] | None
-    path: Path
+    source: str
     missing: bool
 
     @staticmethod
@@ -33,8 +33,8 @@ class Block:
         with _open() as f:
             return Block(json.load(f), path)
 
-    def __init__(self, block_meta: Dict, path: Path):
-        self.path = path
+    def __init__(self, block_meta: Dict, source: str):
+        self.source = source
 
         if 'result' in block_meta:
             self.result = block_meta['result']
