@@ -4,6 +4,9 @@ import json
 from enum import Enum
 from typing import Iterable, Set, List, Tuple, Callable
 
+import pandas
+from pandas import DataFrame
+
 from src.transform.BalanceChange import BalanceChangeAgg
 from src.transform.Block import Block
 from src.transform.Interactions import Interactions
@@ -136,9 +139,16 @@ class TransformTask(Enum):
 
         return tasks
 
+    @staticmethod
+    def errors_to_df(errors: List[List[any]]) -> DataFrame:
+        return DataFrame(errors, columns=['name', 'block', 'message'])
+
     transform: Transform
     meta: List[(str, str)]
 
     def __init__(self, transform: Transform, meta: List[(str, str)]):
         self.transform = transform
         self.meta = meta
+
+    def to_df(self, rows: List[List[any]]) -> DataFrame:
+        return DataFrame(rows, columns=list(map(lambda c: c[1], self.meta)))

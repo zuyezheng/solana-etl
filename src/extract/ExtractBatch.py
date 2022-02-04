@@ -1,6 +1,7 @@
 import gzip
 import json
 from argparse import ArgumentParser
+from typing import Dict
 
 from src.extract.Extract import Extract
 
@@ -12,7 +13,7 @@ class ExtractBatch(Extract):
     @author zuyezheng
     """
 
-    def process_block(self, slot, block_json):
+    def process_block(self, slot: int, block_json: Dict):
         # create subdirectories for each chunk of blocks
         path_loc = self.output_path.joinpath(str(slot // self.slots_per_dir * self.slots_per_dir))
         path_loc.mkdir(parents=True, exist_ok=True)
@@ -26,21 +27,13 @@ if __name__ == '__main__':
     parser = ArgumentParser(description='Extract solana blocks from rpc.')
 
     parser.add_argument(
-        'output_loc',
-        type=str,
-        help='Where to dump the block responses.'
-    )
-
-    parser.add_argument(
-        '--endpoint',
-        type=str,
-        help='Which network to use.',
-        default='https://api.mainnet-beta.solana.com'
+        'output_loc', type=str, help='Directory to dump block responses.'
     )
     parser.add_argument(
-        '--start',
-        type=int,
-        help='Slot to start extract.'
+        '--endpoint', type=str, help='Which network to use.', default='https://api.mainnet-beta.solana.com'
+    )
+    parser.add_argument(
+        '--start', type=int, help='Slot to start extract.'
     )
     parser.add_argument(
         '--end',
@@ -49,13 +42,10 @@ if __name__ == '__main__':
         default=None
     )
     parser.add_argument(
-        '--slots_per_dir',
-        type=int,
-        help='Number of slots to chunk into the same directory.',
-        default=10_000
+        '--slots_per_file',  type=int, help='Number of slots to stream to the same file.', default=10_000
     )
 
     args = parser.parse_args()
 
-    extract = Extract(args.endpoint, args.output_loc, args.slots_per_dir)
+    extract = ExtractBatch(args.endpoint, args.output_loc, args.slots_per_dir)
     extract.start(args.start, args.end)

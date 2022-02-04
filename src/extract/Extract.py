@@ -2,6 +2,7 @@ import itertools
 import time
 from abc import abstractmethod
 from pathlib import Path
+from typing import Dict
 
 from solana.rpc.api import Client
 
@@ -85,7 +86,7 @@ class Extract:
                 self.process_block(slot, block_json)
 
     @abstractmethod
-    def process_block(self, slot, block_json):
+    def process_block(self, slot: int, block_json: Dict):
         raise NotImplemented
 
 
