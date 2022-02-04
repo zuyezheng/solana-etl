@@ -45,7 +45,7 @@ class ExtractStreaming(Extract):
             write_rows('errors', TransformTask.errors_to_df([['process_block', slot, str(e)]]))
 
 
-if __name__ == '__main__':
+def main():
     parser = ArgumentParser(description='Extract, transform and load solana blocks from rpc to file.')
 
     parser.add_argument(
@@ -77,3 +77,7 @@ if __name__ == '__main__':
         TransformTask.from_names(args.tasks)
     )
     extract.start(args.start, args.end)
+
+
+if __name__ == '__main__':
+    main()
