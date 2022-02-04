@@ -4,7 +4,6 @@ import json
 from enum import Enum
 from typing import Iterable, Set, List, Tuple, Callable
 
-import pandas
 from pandas import DataFrame
 
 from src.transform.BalanceChange import BalanceChangeAgg
@@ -151,4 +150,4 @@ class TransformTask(Enum):
         self.meta = meta
 
     def to_df(self, rows: List[List[any]]) -> DataFrame:
-        return DataFrame(rows, columns=list(map(lambda c: c[1], self.meta)))
+        return DataFrame(rows, columns=list(map(lambda c: c[0], self.meta)))

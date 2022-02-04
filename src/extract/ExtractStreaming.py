@@ -28,9 +28,9 @@ class ExtractStreaming(Extract):
         def write_rows(name: str, df: DataFrame):
             file_path = path_base.with_name(f'{path_base.name}_{name.lower()}.csv')
             if file_path.exists():
-                df.to_csv(str(file_path), index=False, header=True)
+                df.to_csv(str(file_path), mode='a', index=False, header=False)
             else:
-                df.to_csv(str(file_path), mode='a', header=False)
+                df.to_csv(str(file_path), index=False, header=True)
 
         try:
             block = Block(block_json, str(slot))
