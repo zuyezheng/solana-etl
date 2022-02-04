@@ -7,17 +7,15 @@ from contextlib import contextmanager
 from enum import Enum
 from functools import partial
 from pathlib import Path
-from typing import List, Set, Callable, Iterable, Dict, Tuple
+from typing import List, Set, Callable, Dict, Tuple
 
 import dask
 import dask.bag as bag
 from dask.delayed import Delayed
 from distributed import LocalCluster, Client
 
-from src.parse.BalanceChange import BalanceChangeAgg
-from src.parse.Block import Block
-from src.transform.Interactions import Interactions
-from src.transform.Transfer import Transfer
+from src.load.TransformTask import TransformTask
+from src.transform.Block import Block
 
 ResultsAndErrors = Tuple[List[List[any]], List[List[any]]]
 Transform = Callable[[Block], ResultsAndErrors]
@@ -66,70 +64,6 @@ class FileOutput:
         self._has_subdirs = all(map(lambda p: p.is_dir(), self.blocks_path.iterdir()))
 
     @staticmethod
-    def blocks_to_transactions(block: Block) -> ResultsAndErrors:
-        rows = []
-        errors = []
-
-        for transaction in block.transactions:
-            try:
-                rows.append([
-                    block.epoch(),
-                    transaction.signature,
-                    transaction.fee,
-                    transaction.is_successful,
-                    len(transaction.instructions),
-                    json.dumps(list(map(lambda a: a.key, transaction.instructions.programs))),
-                    len(transaction.accounts),
-                    json.dumps({
-                        account_type.name: [
-                            a.key for a in accounts
-                        ] for account_type, accounts in transaction.accounts_by_type.items()
-                    }),
-                    transaction.total_account_balance_change(BalanceChangeAgg.OUT).v,
-                    transaction.total_account_balance_change(BalanceChangeAgg.IN).v,
-                    json.dumps(len(transaction.mints)),
-                    json.dumps(list(transaction.mints)),
-                    json.dumps({mint: change.float for mint, change in
-                                transaction.total_token_changes(BalanceChangeAgg.OUT).items()}),
-                    json.dumps({mint: change.float for mint, change in
-                                transaction.total_token_changes(BalanceChangeAgg.IN).items()}),
-                    block.hash,
-                    str(block.path.name)
-                ])
-            except Exception as e:
-                errors.append(['blocks_to_transactions', str(block.path.name), str(e)])
-
-        return rows, errors
-
-    @staticmethod
-    def blocks_to_transfers(block: Block) -> ResultsAndErrors:
-        """
-        For each block, return a tuple of rows of parsed transfers and rows of errors.
-        """
-        rows = []
-        errors = []
-
-        interactions = Interactions([block])
-        for interaction in interactions:
-            try:
-                if isinstance(interaction, Transfer):
-                    rows.append([
-                        block.epoch(),
-                        interaction.source,
-                        interaction.destination,
-                        interaction.mint,
-                        interaction.value.v,
-                        interaction.value.scale,
-                        interaction.transaction_signature,
-                        block.hash,
-                        str(block.path.name)
-                    ])
-            except Exception as e:
-                errors.append(['blocks_to_transfers', str(block.path.name), str(e)])
-
-        return rows, errors
-
-    @staticmethod
     def transform(
         tasks: Dict[str, Transform], json_and_path: (str, str)
     ) -> (Dict[str, List[List[any]]], List[List[any]]):
@@ -137,14 +71,14 @@ class FileOutput:
         Perform all the transform tasks on a given block json and aggregate int a tuple of results in a dictionary by
         task and errors.
         """
-        block_path = Path(json_and_path[1])
+        block_source = Path(json_and_path[1]).name
 
         # default to empty rows for each task for a easy flatten of results vs dealing with Nones
         results = {task_name: [] for task_name in tasks}
         errors = []
 
         try:
-            block = Block(json.loads(json_and_path[0]), block_path)
+            block = Block(json.loads(json_and_path[0]), block_source)
 
             # aggregate results and errors for each task
             for task_name in tasks:
@@ -152,7 +86,7 @@ class FileOutput:
                 results[task_name] = results_and_errors[0]
                 errors.extend(results_and_errors[1])
         except Exception as e:
-            errors.append(['json_to_blocks', block_path.name, str(e)])
+            errors.append(['json_to_blocks', block_source, str(e)])
 
         return results, errors
 
@@ -193,7 +127,7 @@ class FileOutput:
 
     def write(
         self,
-        tasks: Set[FileOutputTask],
+        tasks: Set[TransformTask],
         destination_dir: str,
         destination_format: FileOutputFormat,
         keep_subdirs: bool = False
@@ -249,67 +183,6 @@ class FileOutputFormat(Enum):
         self.to_file = to_file
 
 
-class FileOutputTask(Enum):
-    TRANSACTIONS = (
-        FileOutput.blocks_to_transactions,
-        [
-            ('time', 'int64'),
-            ('signature', 'string'),
-            ('fee', 'int64'),
-            ('isSuccessful', 'bool'),
-            ('numInstructions', 'int8'),
-            ('programs', 'str'),
-            ('numAccounts', 'int8'),
-            ('accountsByType', 'string'),
-            ('lamportsOut', 'int64'),
-            ('lamportsIn', 'int64'),
-            ('numMints', 'int8'),
-            ('mints', 'string'),
-            ('tokensOut', 'string'),
-            ('tokensIn', 'string'),
-            ('blockhash', 'string'),
-            ('path', 'string')
-        ]
-    )
-    TRANSFERS = (
-        FileOutput.blocks_to_transfers,
-        [
-            ('time', 'int64'),
-            ('source', 'string'),
-            ('destination', 'string'),
-            ('mint', 'string'),
-            ('value', 'int64'),
-            ('scale', 'int8'),
-            ('transaction', 'string'),
-            ('blockhash', 'string'),
-            ('path', 'string')
-        ]
-    )
-
-    transform: Transform
-    meta: List[(str, str)]
-
-    @staticmethod
-    def all() -> Set[FileOutputTask]:
-        return set([task for task in FileOutputTask])
-
-    @staticmethod
-    def from_names(names: Iterable[str]) -> Set[FileOutputTask]:
-        tasks = set()
-        for name in names:
-            normalized_name = name.upper()
-            if normalized_name == 'ALL':
-                return FileOutputTask.all()
-            else:
-                tasks.add(FileOutputTask[normalized_name])
-
-        return tasks
-
-    def __init__(self, transform: Transform, meta: List[(str, str)]):
-        self.transform = transform
-        self.meta = meta
-
-
 if __name__ == '__main__':
     parser = ArgumentParser(description='Transform and output block information to file.')
 
@@ -326,7 +199,7 @@ if __name__ == '__main__':
 
     with FileOutput.with_local_cluster(temp_dir=args.temp_dir, blocks_dir=args.blocks_dir) as output:
         output.write(
-            FileOutputTask.from_names(args.tasks),
+            TransformTask.from_names(args.tasks),
             args.destination_dir,
             FileOutputFormat[args.destination_format.upper()],
             args.keep_subdirs

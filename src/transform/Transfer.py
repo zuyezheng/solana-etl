@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from src.parse.Instruction import ParsedInstruction
-from src.parse.NumberWithScale import NumberWithScale
-from src.parse.Transaction import Transaction
+from src.transform.Instruction import ParsedInstruction
+from src.transform.NumberWithScale import NumberWithScale
+from src.transform.Transaction import Transaction
 from src.transform.Interaction import Interaction
 
 

@@ -1,6 +1,6 @@
 from typing import List, Dict, Iterable, Set, Optional, Union
 
-from src.parse.Account import Account
+from src.transform.Account import Account
 
 
 class Accounts:

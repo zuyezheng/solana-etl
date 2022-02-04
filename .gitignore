@@ -1,4 +1,9 @@
 .idea/workspace.xml
 .idea/usage.statistics.xml
 .idea/shelf
+
 dask-worker-space
+
+build
+dist
+*.egg-info

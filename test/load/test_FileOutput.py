@@ -4,7 +4,8 @@ from unittest import TestCase
 
 import pandas
 
-from src.load.FileOutput import FileOutput, FileOutputFormat, FileOutputTask
+from src.load.FileOutput import FileOutput, FileOutputFormat
+from src.load.TransformTask import TransformTask
 
 
 class TestFileOutput(TestCase):
@@ -24,7 +25,7 @@ class TestFileOutput(TestCase):
         destination_path = self._test_destination_path.joinpath('transfers')
         with FileOutput.with_local_cluster(temp_dir='.', blocks_dir='resources/blocks') as output:
             output.write(
-                FileOutputTask.all(),
+                TransformTask.all(),
                 destination_path,
                 FileOutputFormat.CSV,
                 True

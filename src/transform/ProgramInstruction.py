@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from src.parse.Instruction import Instructions, Instruction
+from src.transform.Instruction import Instructions, Instruction
 
 
 class ProgramInstruction(Enum):

@@ -1,9 +1,9 @@
 from collections import defaultdict
 from functools import partial
-from typing import List, Dict, Type, TypeVar
+from typing import List, Type, TypeVar
 
-from src.parse.Block import Block
-from src.parse.ProgramInstruction import ProgramInstruction
+from src.transform.Block import Block
+from src.transform.ProgramInstruction import ProgramInstruction
 from src.transform.Interaction import Interaction
 from src.transform.Transfer import CoinTransfer, TokenTransfer
 

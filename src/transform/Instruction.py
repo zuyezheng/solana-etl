@@ -4,8 +4,8 @@ from abc import abstractmethod
 from functools import reduce, cached_property
 from typing import Dict, List, Set, Optional
 
-from src.parse.Account import Account
-from src.parse.Accounts import Accounts
+from src.transform.Account import Account
+from src.transform.Accounts import Accounts
 
 
 class Instruction:

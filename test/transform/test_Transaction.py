@@ -3,10 +3,10 @@ from functools import reduce
 from pathlib import Path
 from typing import Dict, Set
 
-from src.parse.AccountType import AccountType
-from src.parse.BalanceChange import BalanceChangeAgg
-from src.parse.Block import Block
-from src.parse.Transaction import Transaction
+from src.transform.AccountType import AccountType
+from src.transform.BalanceChange import BalanceChangeAgg
+from src.transform.Block import Block
+from src.transform.Transaction import Transaction
 
 
 class TestTransaction(unittest.TestCase):

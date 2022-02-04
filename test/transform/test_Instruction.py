@@ -1,9 +1,9 @@
 import unittest
 from pathlib import Path
 
-from src.parse.ProgramInstruction import ProgramInstruction
-from src.parse.Block import Block
-from src.parse.Transaction import Transaction
+from src.transform.ProgramInstruction import ProgramInstruction
+from src.transform.Block import Block
+from src.transform.Transaction import Transaction
 
 
 class TestInstruction(unittest.TestCase):
