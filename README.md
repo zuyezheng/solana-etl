@@ -8,7 +8,7 @@ pip install git+https://github.com/zuyezheng/solana-etl
 
 ##  Run
 
-For extract tasks a `start` and `end` slot can be provided to configure which blocks to extract. If end is not provided, extract will continue indefinitely until stopped, pausing and retrying when reaching slots for blocks that are not yet available. If `start` is greater than `end`, extract will count down from higher slot.
+Extraction will default to using `https://api.mainnet-beta.solana.com` if `endpoint` is not provided. A `start` and `end` slot can be used to configure which blocks to extract. If end is not provided, extract will continue indefinitely until stopped, pausing and retrying when reaching slots that are not yet available. If `start` is greater than `end`, extract will count down from the higher slot.
 
 To avoid files that get too large or a single directory with too many blocks, `slots_per_file` and `slots_per_dir` can be used to group blocks into something reasonable during extract.
 
