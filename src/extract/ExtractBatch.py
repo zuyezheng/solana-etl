@@ -23,7 +23,7 @@ class ExtractBatch(Extract):
             f.write(json.dumps(block_json).encode('utf-8'))
 
 
-if __name__ == '__main__':
+def main():
     parser = ArgumentParser(description='Extract solana blocks from rpc.')
 
     parser.add_argument(
@@ -42,10 +42,14 @@ if __name__ == '__main__':
         default=None
     )
     parser.add_argument(
-        '--slots_per_file',  type=int, help='Number of slots to stream to the same file.', default=10_000
+        '--slots_per_dir',  type=int, help='Number of slots to stream to the same file.', default=10_000
     )
 
     args = parser.parse_args()
 
     extract = ExtractBatch(args.endpoint, args.output_loc, args.slots_per_dir)
     extract.start(args.start, args.end)
+
+
+if __name__ == '__main__':
+    main()
