@@ -183,7 +183,7 @@ class FileOutputFormat(Enum):
         self.to_file = to_file
 
 
-if __name__ == '__main__':
+def main():
     parser = ArgumentParser(description='Transform and output block information to file.')
 
     parser.add_argument('--tasks', nargs='+', help='List of tasks to execute or all.', required=True)
@@ -204,3 +204,7 @@ if __name__ == '__main__':
             FileOutputFormat[args.destination_format.upper()],
             args.keep_subdirs
         )
+
+
+if __name__ == '__main__':
+    main()

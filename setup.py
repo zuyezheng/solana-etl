@@ -24,8 +24,9 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     entry_points={
         'console_scripts': [
-            'solana-etl-batch = src.extract.ExtractBatch:main',
-            'solana-etl-streaming = src.extract.ExtractStreaming:main'
+            'solana-extract-batch = src.extract.ExtractBatch:main',
+            'solana-extract-streaming = src.extract.ExtractStreaming:main',
+            'solana-load-file = src.load.FileOutput:main'
         ]
     },
 
