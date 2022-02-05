@@ -51,7 +51,7 @@ solana-extract-batch output_loc
 Use dask to batch process into something useful.
 
 ```
-usage: solana-load-file 
+solana-load-file 
     --tasks TASKS [TASKS ...] 
     --temp_dir TEMP_DIR 
     --blocks_dir BLOCKS_DIR 
