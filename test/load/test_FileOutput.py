@@ -21,7 +21,7 @@ class TestFileOutput(TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls._test_destination_path)
 
-    def test_transfers(self):
+    def test_tasks(self):
         destination_path = self._test_destination_path.joinpath('transfers')
         with FileOutput.with_local_cluster(temp_dir='.', blocks_dir='resources/blocks') as output:
             output.write(
@@ -33,13 +33,15 @@ class TestFileOutput(TestCase):
 
         # make sure the outputed files contain the right number of transfers
         expected = [
-            [110130000, 394, 3439],
-            [110360000, 194, 4435]
+            [110130000, 394, 3439, 1],
+            [110360000, 194, 4435, 1]
         ]
-        for block_section, num_transfers, num_transactions in expected:
+        for block_section, num_transfers, num_transactions, num_blocks in expected:
             df = pandas.read_csv(destination_path.joinpath(f'{str(block_section)}_transfers.csv'))
             self.assertEqual((num_transfers, 9), df.shape)
             df = pandas.read_csv(destination_path.joinpath(f'{str(block_section)}_transactions.csv'))
             self.assertEqual((num_transactions, 16), df.shape)
+            df = pandas.read_csv(destination_path.joinpath(f'{str(block_section)}_blocks.csv'))
+            self.assertEqual((num_blocks, 22), df.shape)
             errors = pandas.read_csv(destination_path.joinpath(f'{str(block_section)}_errors.csv'))
             self.assertEqual((0, 3), errors.shape)

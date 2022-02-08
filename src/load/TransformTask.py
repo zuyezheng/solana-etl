@@ -6,6 +6,7 @@ from typing import Iterable, Set, List, Tuple, Callable
 
 from pandas import DataFrame
 
+from src.transform.AccountType import AccountType
 from src.transform.BalanceChange import BalanceChangeAgg
 from src.transform.Block import Block
 from src.transform.Interactions import Interactions
@@ -15,14 +16,14 @@ ResultsAndErrors = Tuple[List[List[any]], List[List[any]]]
 Transform = Callable[[Block], ResultsAndErrors]
 
 
-def blocks_to_transactions(block: Block) -> ResultsAndErrors:
+def block_to_transactions(block: Block) -> ResultsAndErrors:
     rows = []
     errors = []
 
     for transaction in block.transactions:
         try:
             rows.append([
-                block.epoch(),
+                block.epoch,
                 transaction.signature,
                 transaction.fee,
                 transaction.is_successful,
@@ -32,7 +33,7 @@ def blocks_to_transactions(block: Block) -> ResultsAndErrors:
                 json.dumps({
                     account_type.name: [
                         a.key for a in accounts
-                    ] for account_type, accounts in transaction.accounts_by_type.items()
+                    ] for account_type, accounts in transaction.accounts_by_type().items()
                 }),
                 transaction.total_account_balance_change(BalanceChangeAgg.OUT).v,
                 transaction.total_account_balance_change(BalanceChangeAgg.IN).v,
@@ -51,7 +52,7 @@ def blocks_to_transactions(block: Block) -> ResultsAndErrors:
     return rows, errors
 
 
-def blocks_to_transfers(block: Block) -> ResultsAndErrors:
+def block_to_transfers(block: Block) -> ResultsAndErrors:
     """
     For each block, return a tuple of rows of parsed transfers and rows of errors.
     """
@@ -63,7 +64,7 @@ def blocks_to_transfers(block: Block) -> ResultsAndErrors:
         try:
             if isinstance(interaction, Transfer):
                 rows.append([
-                    block.epoch(),
+                    block.epoch,
                     interaction.source,
                     interaction.destination,
                     interaction.mint,
@@ -79,6 +80,30 @@ def blocks_to_transfers(block: Block) -> ResultsAndErrors:
     return rows, errors
 
 
+def block_info(block: Block) -> ResultsAndErrors:
+    row = [
+        block.epoch,
+        block.hash,
+        str(block.source),
+        len(block.transactions)
+    ]
+
+    for transactions in [block.transactions.successful, block.transactions.errors]:
+        row.extend([
+            len(transactions),
+            len(transactions.votes),
+            len(transactions.more_than_fee),
+            len(transactions.only_fee),
+            transactions.fees,
+            transactions.balance_change(BalanceChangeAgg.OUT).v
+        ])
+
+        accounts_by_type = transactions.accounts_by_type
+        for account_type in [AccountType.PROGRAM, AccountType.COIN, AccountType.TOKEN]:
+            row.append(len(accounts_by_type.get(account_type, [])))
+
+    return [row], []
+
 class TransformTask(Enum):
     """
     Tasks that perform a set of transformations and returns a set of loadable results and metadata.
@@ -87,7 +112,7 @@ class TransformTask(Enum):
     """
 
     TRANSACTIONS = (
-        blocks_to_transactions,
+        block_to_transactions,
         [
             ('time', 'int64'),
             ('signature', 'string'),
@@ -108,8 +133,9 @@ class TransformTask(Enum):
         ]
     )
     TRANSFERS = (
-        blocks_to_transfers,
+        block_to_transfers,
         [
+
             ('time', 'int64'),
             ('source', 'string'),
             ('destination', 'string'),
@@ -119,6 +145,33 @@ class TransformTask(Enum):
             ('transaction', 'string'),
             ('blockhash', 'string'),
             ('path', 'string')
+        ]
+    )
+    BLOCKS = (
+        block_info,
+        [
+            ('time', 'int64'),
+            ('hash', 'string'),
+            ('path', 'string'),
+            ('numTransactions', 'int64'),
+            ('numSuccessful', 'int64'),
+            ('successfulVotes', 'int64'),
+            ('successfulTransactionsMoreThanFee', 'int64'),
+            ('successfulTransactionsOnlyFee', 'int64'),
+            ('successfulFees', 'int64'),
+            ('successfulBalanceChange', 'int64'),
+            ('successfulProgramAccounts', 'int64'),
+            ('successfulCoinAccounts', 'int64'),
+            ('successfulTokenAccounts', 'int64'),
+            ('numErrors', 'int64'),
+            ('errorVotes', 'int64'),
+            ('errorTransactionsMoreThanFee', 'int64'),
+            ('errorTransactionsOnlyFee', 'int64'),
+            ('errorFees', 'int64'),
+            ('errorBalanceChange', 'int64'),
+            ('errorProgramAccounts', 'int64'),
+            ('errorCoinAccounts', 'int64'),
+            ('errorTokenAccounts', 'int64')
         ]
     )
 
