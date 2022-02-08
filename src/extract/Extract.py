@@ -1,6 +1,7 @@
 import itertools
 import time
 from abc import abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict
 
@@ -19,6 +20,16 @@ class BlockException(Exception):
             return True
 
         return False
+
+
+@dataclass
+class TimedResponse:
+    response: any
+    call_time: float
+    total_time: float = -1
+
+    def with_total(self, total: float):
+        return TimedResponse(self.response, self.call_time, total)
 
 
 class Extract:
@@ -43,10 +54,14 @@ class Extract:
         wait_duration: int = 5,
         # wait will be doubled each time until max is exceeded
         max_duration: int = 60
-    ):
-        result = None
+    ) -> TimedResponse:
+        start = time.perf_counter()
+        response = TimedResponse(None, -1)
+
         try:
-            result = call()
+            call_start = time.perf_counter()
+            call_response = call()
+            response = TimedResponse(call_response, time.perf_counter() - call_start)
         except Exception as e:
             retryable = True
             if isinstance(e, BlockException):
@@ -56,11 +71,11 @@ class Extract:
                 print(f'Waiting {wait_duration} seconds: "{e}".')
 
                 time.sleep(wait_duration)
-                result = self.execute_with_backoff(call, wait_duration * 2, max_duration)
+                response = self.execute_with_backoff(call, wait_duration * 2, max_duration)
             else:
                 print(f'Max wait exceeded: "{e}".')
 
-        return result
+        return response.with_total(time.perf_counter() - start)
 
     def get_block(self, slot: int):
         block = self._client.get_block(slot, 'jsonParsed')
@@ -78,12 +93,36 @@ class Extract:
             else:
                 return range(start, end + 1)
 
+        num_blocks = 0
+        call_time = 0
+        call_time_with_wait = 0
+        process_time = 0
+
         for slot in get_slots():
-            block_json = self.execute_with_backoff(lambda: self.get_block(slot))
-            if block_json is None:
+            timed_response = self.execute_with_backoff(lambda: self.get_block(slot))
+            if timed_response.response is None:
                 print(f'Error fetching info for slot {slot}.')
             else:
-                self.process_block(slot, block_json)
+                call_time += timed_response.call_time
+                call_time_with_wait += timed_response.total_time
+
+                start = time.perf_counter()
+                self.process_block(slot, timed_response.response)
+                process_time += time.perf_counter() - start
+
+                num_blocks += 1
+
+            if num_blocks % 60 == 0:
+                print(f'Extracted {num_blocks} blocks ending on {slot} with average times: '
+                      f'call: {call_time/num_blocks:.2f}s, '
+                      f'call with wait: {call_time_with_wait/num_blocks:.2f}s, '
+                      f'process: {process_time/num_blocks:.2f}s.')
+
+                num_blocks = 0
+                call_time = 0
+                call_time_with_wait = 0
+                process_time = 0
+
 
     @abstractmethod
     def process_block(self, slot: int, block_json: Dict):

@@ -25,14 +25,6 @@ class TestTransaction(unittest.TestCase):
             '44DLZ5ezRVvibgxwc4erA4ywQ7XUyf3DvPyt3uqsQR1ucZs2wSrBcHJRe7V2P2FoYJK9XPXNsp4mAnVX8sLXpvin'
         )
 
-    def test_transactions(self):
-        self.assertTrue(self._block.has_transactions(), 'Block should have transactions.')
-        self.assertEqual(
-            set(self._block.transactions),
-            set(self._block.transactions.more_than_fee()) | set(self._block.transactions.only_fee()),
-            'Set of transactions more than fee and only fee should include all transactions.'
-        )
-
     def test_balance_changes(self):
         self.assertEqual(
             {
@@ -189,13 +181,13 @@ class TestTransaction(unittest.TestCase):
                     'E2HeNtruwL6bcd6XSqKGk5ucw43jrNsThFHoSmTNeSbi'
                 }
             },
-            to_keys(self._interesting_transaction.accounts_by_type)
+            to_keys(self._interesting_transaction.accounts_by_type())
         )
 
         # make sure all accounts are in by type
         self.assertEqual(
             len(self._interesting_transaction.accounts),
-            count(self._interesting_transaction.accounts_by_type)
+            count(self._interesting_transaction.accounts_by_type())
         )
 
         self.assertEqual(
@@ -235,10 +227,10 @@ class TestTransaction(unittest.TestCase):
                     'ufLNV197ZaHDVX79ZTrMrEWy88AX4oC2msZkCfkRT2J'
                 }
             },
-            to_keys(self._transaction_with_tokens.accounts_by_type)
+            to_keys(self._transaction_with_tokens.accounts_by_type())
         )
 
         self.assertEqual(
             len(self._transaction_with_tokens.accounts),
-            count(self._transaction_with_tokens.accounts_by_type)
+            count(self._transaction_with_tokens.accounts_by_type())
         )

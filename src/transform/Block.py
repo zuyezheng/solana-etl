@@ -50,6 +50,7 @@ class Block:
     def has_transactions(self) -> bool:
         return not self.missing and len(self.result['transactions']) > 0
 
+    @property
     def epoch(self) -> int:
         return self.result['blockTime']
 

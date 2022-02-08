@@ -23,7 +23,7 @@ class Interactions:
     def __init__(self, blocks: List[Block]):
         self.interactions = []
         for block in blocks:
-            for transaction in block.transactions.successful():
+            for transaction in block.transactions.successful:
                 # add coin transfers
                 self.interactions.extend(map(
                     partial(CoinTransfer.from_instruction, transaction),

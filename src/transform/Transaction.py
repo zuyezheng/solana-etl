@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property, reduce
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 
 from src.transform.Account import Account
 from src.transform.AccountType import AccountType
@@ -159,13 +159,12 @@ class Transaction:
         """ All token mints in the transaction. """
         return {change.mint for change in self.token_balance_changes.values()}
 
-    @cached_property
     def accounts_by_type(self) -> Dict[AccountType, Set[Account]]:
         program_accounts = self.instructions.programs
         token_accounts = set(self.token_balance_changes.keys())
-
         sysvar_accounts = set()
         coin_accounts = set()
+
         for account in self.accounts:
             if account.key.lower().startswith('sysvar'):
                 sysvar_accounts.add(account)
@@ -178,3 +177,11 @@ class Transaction:
             AccountType.TOKEN: token_accounts,
             AccountType.COIN: coin_accounts
         }
+
+    def has_instruction_of(self, program_name: str, instruction_type: Optional[str] = None) -> bool:
+        """ If there are any parsed interactions of the given type. """
+        for instruction in self.instructions:
+            if instruction.is_of(program_name, instruction_type):
+                return True
+
+        return False

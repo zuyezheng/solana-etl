@@ -7,8 +7,7 @@ class Account:
     """
     Account with key and index specific to a transaction.
 
-    This is intended to be used with Accounts so hash and eq are only valid for within a transaction where index of an
-    account is consistent.
+    Hash and equality only considers the key so accounts across transactions will be equal even with different indices.
 
     @author zuyezheng
     """
