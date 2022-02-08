@@ -16,6 +16,7 @@ To avoid files that get too large or a single directory with too many blocks, `s
 
 You can specify which specific tasks you want to use from transforms or `all`. Specific schemas for each can be found in [TransformTask](https://github.com/zuyezheng/solana-etl/blob/master/src/load/TransformTask.py).
 
+- **Blocks**: Aggreggate metric per block including number of successful and errored our transactions each with metrics such as number of votes, fees, total balance changes, number of accounts by type.
 - **Transactions**: All transactions including those that errored out with things like number of transactions, accounts, mints as well as serialized JSON for coin and token changes.
 - **Transfers**: All successful transforms for coins and tokens. `values` are stored unscaled with an adjacent `scale` column.
 
