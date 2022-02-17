@@ -51,9 +51,9 @@ class Extract:
         # lambda to execute
         call,
         # duration of wait if exception is thrown in call
-        wait_duration: int = 5,
+        wait_duration: int = 1,
         # wait will be doubled each time until max is exceeded
-        max_duration: int = 60
+        max_duration: int = 8
     ) -> TimedResponse:
         start = time.perf_counter()
         response = TimedResponse(None, -1)
@@ -112,7 +112,7 @@ class Extract:
 
                 num_blocks += 1
 
-            if num_blocks % 60 == 0:
+            if num_blocks > 0 and num_blocks % 60 == 0:
                 print(f'Extracted {num_blocks} blocks ending on {slot} with average times: '
                       f'call: {call_time/num_blocks:.2f}s, '
                       f'call with wait: {call_time_with_wait/num_blocks:.2f}s, '
