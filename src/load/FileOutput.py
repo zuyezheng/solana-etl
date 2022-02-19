@@ -4,16 +4,15 @@ import json
 import multiprocessing
 from argparse import ArgumentParser
 from contextlib import contextmanager
-from enum import Enum
 from functools import partial
 from pathlib import Path
 from typing import List, Set, Callable, Dict, Tuple
 
 import dask
 import dask.bag as bag
-from dask.delayed import Delayed
 from distributed import LocalCluster, Client
 
+from src.load.StorageFormat import StorageFormat
 from src.load.TransformTask import TransformTask
 from src.transform.Block import Block
 
@@ -27,11 +26,6 @@ class FileOutput:
 
     @author zuyezheng
     """
-
-    blocks_path: Path
-    _has_subdirs: bool
-
-    _client: Client
 
     @staticmethod
     @contextmanager
@@ -54,14 +48,6 @@ class FileOutput:
             Client(cluster, timeout=120) as client:
             kwargs['client'] = client
             yield FileOutput(**kwargs)
-
-    def __init__(self, blocks_dir: str, client: Client):
-        """ Initialize with directory of block extracts. """
-        self.blocks_path = Path(blocks_dir)
-        self._client = client
-
-        # if all files in the blocks directories are directories, then go into each
-        self._has_subdirs = all(map(lambda p: p.is_dir(), self.blocks_path.iterdir()))
 
     @staticmethod
     def transform(
@@ -89,6 +75,18 @@ class FileOutput:
             errors.append(['json_to_blocks', block_source, str(e)])
 
         return results, errors
+
+    blocks_path: Path
+    _has_subdirs: bool
+    _client: Client
+
+    def __init__(self, blocks_dir: str, client: Client):
+        """ Initialize with directory of block extracts. """
+        self.blocks_path = Path(blocks_dir)
+        self._client = client
+
+        # if all files in the blocks directories are directories, then go into each
+        self._has_subdirs = all(map(lambda p: p.is_dir(), self.blocks_path.iterdir()))
 
     def source_and_destinations(
         self, destination_dir: str, keep_subdirs: bool = False
@@ -129,7 +127,7 @@ class FileOutput:
         self,
         tasks: Set[TransformTask],
         destination_dir: str,
-        destination_format: FileOutputFormat,
+        destination_format: StorageFormat,
         keep_subdirs: bool = False
     ):
         """
@@ -168,21 +166,6 @@ class FileOutput:
             # defer compute of both results so dask will know to reuse intermediate results
             dask.compute(*task_results, errors)
 
-
-class FileOutputFormat(Enum):
-    CSV = (
-        lambda delayed, path: delayed.to_csv(f'{path}.csv', index=False, single_file=True, compute=False), 0
-    )
-    PARQUET = (
-        lambda delayed, path: delayed.to_parquet(f'{path}', compute=False), 1
-    )
-
-    to_file: Callable[[Delayed, str], Delayed]
-
-    def __init__(self, to_file: Callable[[Delayed, str], Delayed], _):
-        self.to_file = to_file
-
-
 def main():
     parser = ArgumentParser(description='Transform and output block information to file.')
 
@@ -201,7 +184,7 @@ def main():
         output.write(
             TransformTask.from_names(args.tasks),
             args.destination_dir,
-            FileOutputFormat[args.destination_format.upper()],
+            StorageFormat[args.destination_format.upper()],
             args.keep_subdirs
         )
 
